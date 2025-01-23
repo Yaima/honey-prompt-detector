@@ -1,0 +1,35 @@
+# Python bytecode and caches
+*.pyc
+__pycache__/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment and secrets
+.env
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Logs & generated artifacts
+*.log
+detection_metrics.json
+alert_history.json
+experiment_results_*.json
+
+# IDE configs
+.idea/
+.vscode/
+
+# Distribution / build artifacts
+dist/
+build/
+*.egg-info/
+
+# Ignore macOS-specific metadata
+.DS_Store
+
+# Ignore environment/secret files
+.env
