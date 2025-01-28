@@ -1,3 +1,7 @@
+![Honey-Prompt](img/light-mode.png#gh-light-mode-only)
+![Honey-Prompt](img/dark-mode.png#gh-dark-mode-only)
+
+
 # Honey-Prompt Detector
 
 **A specialized prompt-injection detection framework leveraging honey-prompt tokens, LLM-based classification, and monitoring tools to protect Large Language Models.**
