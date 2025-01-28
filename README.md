@@ -1,5 +1,7 @@
-![Honey-Prompt](img/light-mode.png#gh-light-mode-only)
-![Honey-Prompt](img/dark-mode.png#gh-dark-mode-only)
+<p align="center">
+  <img src="img/light-mode.png#gh-light-mode-only" alt="Honey-Prompt" width="250">
+  <img src="img/dark-mode.png#gh-dark-mode-only" alt="Honey-Prompt" width="250">
+</p>
 
 
 # Honey-Prompt Detector
