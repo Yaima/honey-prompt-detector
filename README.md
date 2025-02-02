@@ -10,40 +10,80 @@
 
 ## Table of Contents
 1. [Overview](#overview)
-2. [Key Features](#key-features)
+2. [Key Features](#key-features-and-novel-contributions)
 3. [Project Structure](#project-structure)
-4. [Installation](#installation)
-5. [Configuration](#configuration)
-6. [How It Works](#how-it-works)
-7. [Testing & Experiments](#testing--experiments)
-8. [Alerts & Monitoring](#alerts--monitoring)
-9. [Contributing](#contributing)
-10. [License](#license)
+4. [Architecture and Multi-Agent Design](#architecture-and-multi-agent-design)
+5. [Installation](#installation)
+6. [Configuration](#configuration)
+7. [How It Works](#how-it-works)
+8. [Testing & Experiments](#testing--experiments)
+9. [Alerts & Monitoring](#alerts--monitoring)
+10. [Contributing](#contributing)
+11. [License](#license)
 
 ---
 
 ## Overview
 
-Honey-Prompt Detector helps identify **prompt-injection attacks**—malicious user inputs that override hidden or system-level instructions in AI models. By embedding **secret tokens** (honey-prompts) in system prompts and scanning for their leakage, we can detect attempts to manipulate the model’s behavior or expose private context.
+Honey-Prompt Detector addresses the vulnerability of LLMs to prompt injection attacks—malicious inputs that override hidden instructions, potentially exposing sensitive data or altering intended behaviors. Unlike many current defenses that are primarily post‑hoc (e.g., filtering or watermarking), HIVE is designed for proactive, real-time detection and dynamic adaptation.
 
 ---
 
-## Key Features
+## Key Features and Novel Contributions
 
-- **Honey-Prompt Token Generation**  
-  Uses a token designer agent (e.g., GPT-based) to create unique, secret tokens that can be embedded in the system prompt. If these tokens ever appear in user-facing outputs, it indicates a prompt injection has succeeded.
+### Proactive Detection
+- **Embedding of Honey‑Prompt Tokens:**  
+  Embeds secret honey‑prompt tokens into the LLM’s hidden instructions.
+- **Continuous Monitoring:**  
+  Continuously monitors outputs for token leakage or manipulation.
 
-- **LLM-Based Fallback Detection**  
-  When no honey-prompt token is found, the entire user input is evaluated by a GPT-based classifier (`ContextEvaluatorAgent`). This helps catch obfuscated or token-less attacks that attempt to override instructions.
+### Context-Aware Evaluation
+- **Primary Context Evaluator:**  
+  Uses LLM-based classification to assess the input context.
+- **Enhanced Context Evaluator:**  
+  Optionally integrates semantic similarity (via SentenceTransformer) to further adjust detection confidence.  
+  These complementary modules help differentiate benign from malicious inputs.
 
-- **Flexible Orchestrator**  
-  A central detection orchestrator coordinates token checks, fallback logic, and final decisions on whether an input is malicious. This modular design lets you adapt or extend the detection rules easily.
+### Dynamic Adaptation
+- **Configurable, Dynamically Adjusted Thresholds:**  
+  Thresholds respond to real-time performance metrics.
+- **Adaptability:**  
+  Ensures the system adapts to evolving attack methods without manual retuning.
 
-- **Metrics & Alerts**  
-  A monitoring module tracks detections, response times, and errors. Alerts can be sent via email, Slack, or other channels when high-risk attacks are detected, ensuring real-time notification.
+### Lightweight and Scalable Integration
+- **Asynchronous API Wrapper:**  
+  Designed as an asynchronous API wrapper, requiring no modifications to the underlying LLM.
+- **Modular Multi-Agent Architecture:**  
+  Incorporates TokenDesignerAgent, ContextEvaluatorAgent, EnhancedContextEvaluator, Detector, and Orchestrator to support scalability and flexibility.
 
-- **Configuration & Extensibility**  
-  All key parameters (e.g. token detection thresholds, LLM model names, alert settings) are configurable via `.env` or JSON, making it easy to adapt to different LLM APIs or deployment environments.
+### Comprehensive Monitoring and Alerts
+- **Performance Metrics:**  
+  Tracks detection rates, response times, and confidence scores.
+- **Alerts:**  
+  Can notify stakeholders via email, Slack, or other channels when high-risk detections occur.
+---
+
+## Architecture and Multi-Agent Design
+
+HIVE is built using a modular, multi-agent approach:
+
+- **TokenDesignerAgent:**  
+  Dynamically generates unique honey‑prompt tokens and variations using a GPT-based API. These tokens are then embedded into the LLM’s hidden instructions.
+
+- **Context Evaluators:**
+  - **ContextEvaluatorAgent:**  
+    The primary agent that uses LLM-based methods to evaluate user inputs in real time.
+  - **EnhancedContextEvaluator:**  
+    An optional module that applies semantic similarity techniques to further refine the detection confidence.  
+    These two agents can work independently or be combined in the detection pipeline.
+
+- **Detector:**  
+  Implements various matching strategies (exact, variation, obfuscation) to detect honey‑prompt tokens in the output. Its dynamic threshold mechanism adapts based on runtime performance.
+
+- **DetectionOrchestrator:**  
+  Coordinates the above agents. It embeds tokens, monitors outputs, and invokes both context evaluators and the detector to make final decisions.
+
+This multi-agent design not only improves detection performance but also enables scalable integration across different LLM deployments.
 
 ---
 
@@ -53,35 +93,51 @@ Below is a typical layout for this repository (some files or folders may differ 
 
 ```text
     honey-prompt-detector/
-    ├── .venv/                      # (Optional) Virtual environment
-    ├── docs/                       # Documentation or design notes
+    ├── .venv/                      # Virtual environment (optional)
+    ├── docs/                       # Documentation, experiment results, summaries
+    │   ├── experiment_results_analysis.json
+    │   ├── experiment_results_raw.json
+    │   └── paper_results_summary.txt
     ├── examples/
     │   ├── __init__.py
-    │   └── basic_usage.py          # Example script showing how to run experiments
+    │   ├── alert_history.json
+    │   └── basic_usage.py          # Experiment runner and usage demo
+    ├── img/
+    │   ├── dark-mode.png
+    │   └── light-mode.png
+    ├── requirements.txt            # Dependencies
     ├── src/
     │   └── honey_prompt_detector/
+    │       ├── __init__.py
     │       ├── agents/
-    │       │   ├── context_evaluator.py   # GPT-based logic for classifying suspicious text
-    │       │   └── token_designer.py      # GPT-based logic for generating honey tokens
+    │       │   ├── __init__.py
+    │       │   ├── context_evaluator.py         # Primary LLM-based evaluator
+    │       │   ├── enhanced_context_evaluator.py  # Optional semantic similarity evaluator
+    │       │   └── token_designer.py              # Token generation logic
     │       ├── core/
-    │       │   ├── honey_prompt.py        # Data class for token + detection rules
-    │       │   └── orchestrator.py        # Coordinates token checks & fallback detection
+    │       │   ├── __init__.py
+    │       │   ├── detector.py                  # Matching and dynamic threshold logic
+    │       │   ├── honey_prompt.py              # Data class for tokens and rules
+    │       │   ├── matching.py                  # Fuzzy matching utilities
+    │       │   ├── orchestrator.py              # Coordinates agents and detection flow
+    │       │   └── streaming_detector.py        # (Optional) Streaming detection logic
+    │       ├── main.py                          # CLI entry point
     │       ├── monitoring/
-    │       │   ├── alerts.py             # Sends alerts (email, Slack, etc.)
-    │       │   └── metrics.py            # Tracks and saves detection metrics
-    │       ├── utils/
-    │       │   ├── config.py             # Loads configurations, environment variables
-    │       │   ├── logging.py            # Custom logging setup
-    │       │   └── validation.py         # Input validation helpers
-    │       ├── main.py                   # CLI entry point (run with `python -m ...`)
-    │       └── __init__.py
+    │       │   ├── __init__.py
+    │       │   ├── alerts.py                    # Alert management (email, Slack, etc.)
+    │       │   ├── dynamic_adaptation.py        # Dynamic threshold helper
+    │       │   └── metrics.py                   # Metrics collection and logging
+    │       └── utils/
+    │           ├── __init__.py
+    │           ├── config.py                    # Configuration (.env support)
+    │           ├── logging.py                   # Custom logging setup
+    │           └── validation.py                # Input validation helpers
     ├── test/
     │   └── __init__.py
-    ├── .env                           # Environment variables (API keys, config, etc.)
-    ├── .gitignore                     # Common ignores (venv, logs, etc.)
-    ├── requirements.txt               # Python dependencies
-    ├── LICENSE                        # MIT or other license
-    └── README.md                      # The file you're reading now
+    ├── .env                        # Environment variables and API keys
+    ├── LICENSE
+    └── README.md
+        
 
 ```
 
@@ -185,27 +241,19 @@ Risk Level: high
 
 ## How It Works
 
-The Honey-Prompt Detection System leverages a hybrid detection strategy combining **honey-prompt tokens** and **LLM-based classification** to proactively identify prompt injection attacks.
+1. **Embedding:**  
+   The system embeds honey‑prompt tokens into the LLM’s hidden instructions via the TokenDesignerAgent.
 
-### 1. Honey-Prompt Tokens
+2. **Monitoring:**  
+   The DetectionOrchestrator continuously scans the outputs for token appearances (using the Detector).
 
-- **Generation**: Unique, secret tokens are created using the `TokenDesignerAgent` and embedded in the system's hidden instructions. These tokens are invisible to regular users.
-- **Detection**: The system scans user input and generated outputs for the presence of honey-prompt tokens. If tokens appear, this signals a successful prompt injection or context leakage.
+3. **Evaluation:**  
+   - The ContextEvaluatorAgent evaluates the input with LLM-based methods.  
+   - Optionally, if needed, the EnhancedContextEvaluator refines the detection via semantic similarity.  
+   - Dynamic thresholds in the Detector adjust based on real-time metrics.
 
-### 2. LLM-Based Fallback Detection
-
-- If no honey-prompt token is detected, the system uses the `ContextEvaluatorAgent` to evaluate the entire user input. This GPT-based agent classifies whether the input is malicious or benign based on its phrasing, context, and intent.
-
-### 3. Detection Orchestrator
-
-The orchestrator coordinates:
-- **Token matching**: First checks for the presence of honey-prompt tokens or their variations in user inputs.
-- **Fallback evaluation**: If no token is matched, the input is evaluated by the `ContextEvaluatorAgent` for obfuscated or indirect attacks.
-
-### 4. Monitoring and Alerts
-
-- **MetricsCollector**: Tracks system performance, including detection rates, false positives, and response times.
-- **AlertManager**: Sends real-time alerts via email, Slack, or other channels for critical detections.
+4. **Alerts:**  
+   High-risk detections trigger alerts (via email, Slack, etc.), and performance metrics are recorded for ongoing analysis.
 
 ### Flow Diagram
 

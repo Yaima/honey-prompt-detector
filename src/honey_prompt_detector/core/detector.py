@@ -49,9 +49,17 @@ class Detector:
         # Check for exact token match first
         if honey_prompt.base_token in text:
             match_info = self._analyze_exact_match(text, honey_prompt, context_window_size)
+            # If borderline, adjust using semantic similarity
+            if match_info['confidence'] < local_threshold and honey_prompt.context:
+                adjusted_confidence = self.context_evaluator.adjust_confidence(
+                    match_info['confidence'],
+                    match_info.get('context', ''),
+                    honey_prompt.context
+                )
+                match_info['confidence'] = adjusted_confidence
+                logger.debug(f"Adjusted confidence using semantic similarity: {adjusted_confidence}")
             if match_info['confidence'] >= local_threshold:
-                self._record_detection(match_info)
-                return match_info
+                self._record_detec
 
         # Check for variations
         variation_match = self._check_variations(text, honey_prompt, context_window_size)

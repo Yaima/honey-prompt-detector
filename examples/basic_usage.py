@@ -22,23 +22,23 @@ except ImportError as e:
     print(f"Import Error: {e}")
     sys.exit(1)
 
-# Import dynamic threshold adjustment helper
+# Import the dynamic threshold adjustment helper.
 try:
     from honey_prompt_detector.monitoring.dynamic_adaptation import adjust_threshold_based_on_performance
 except ImportError:
-    def adjust_threshold_based_on_performance(current_threshold: float, detection_rate: float,
-                                              target_rate: float = 0.9) -> float:
+    def adjust_threshold_based_on_performance(current_threshold: float, detection_rate: float, target_rate: float = 0.9,
+                                              step_size: float = 0.05) -> float:
         if detection_rate < target_rate:
-            new_threshold = max(0.5, current_threshold - 0.05)
+            new_threshold = max(0.5, current_threshold - step_size)
         else:
-            new_threshold = min(1.0, current_threshold + 0.02)
+            new_threshold = min(1.0, current_threshold + (step_size * 0.4))
         return new_threshold
 
 
 class ExperimentRunner:
     """
     Runs comprehensive experiments with the honey-prompt detection system
-    to prove key claims regarding proactive detection, context-aware evaluation,
+    to demonstrate proactive detection, context-aware evaluation,
     lightweight design, dynamic adaptation, and scalable integration.
     """
 
@@ -49,7 +49,7 @@ class ExperimentRunner:
             'response_times': [],
             'confidence_scores': []
         }
-        # Expanded test cases for robust statistics
+        # Expanded test cases for robust statistics.
         self.test_cases = {
             'benign': [
                 "What is the capital of France?",
@@ -83,7 +83,7 @@ class ExperimentRunner:
         if not category_results.empty:
             detection_rate = category_results['detected'].mean()
             new_threshold = adjust_threshold_based_on_performance(detector.confidence_threshold, detection_rate,
-                                                                  target_rate=0.9)
+                                                                  target_rate=0.9, step_size=0.05)
             print(f"Updating threshold for {category}: {detector.confidence_threshold:.2f} -> {new_threshold:.2f}")
             detector.confidence_threshold = new_threshold
 
@@ -99,7 +99,7 @@ class ExperimentRunner:
         print("\nRunning Honey-Prompt Detection Experiments")
         print("=========================================")
 
-        # Run test cases for each category concurrently
+        # Run test cases for each category concurrently.
         tasks = []
         for category, test_cases in self.test_cases.items():
             tasks.append(self._run_test_category(system, category, test_cases))

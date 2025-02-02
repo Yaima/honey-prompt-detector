@@ -52,15 +52,16 @@ class DynamicAdaptation:
             logger.info(f"Decreased detector threshold to {self.detector.confidence_threshold:.2f}")
 
     def adjust_threshold_based_on_performance(current_threshold: float, detection_rate: float,
-                                              target_rate: float = 0.9) -> float:
+                                              target_rate: float = 0.9, step_size: float = 0.05) -> float:
         """
         Adjust the threshold based on detection performance.
-        If detection_rate is below target_rate, lower the threshold slightly.
+        If detection_rate is below target_rate, lower the threshold by step_size.
+        If above, optionally raise it slightly.
         """
         if detection_rate < target_rate:
-            new_threshold = max(0.5, current_threshold - 0.05)
+            new_threshold = max(0.5, current_threshold - step_size)
         else:
-            new_threshold = min(1.0, current_threshold + 0.02)
+            new_threshold = min(1.0, current_threshold + (step_size * 0.4))
         return new_threshold
 
 
