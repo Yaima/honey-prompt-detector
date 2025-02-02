@@ -17,6 +17,7 @@ from .agents.context_evaluator import ContextEvaluatorAgent
 from .core.orchestrator import DetectionOrchestrator
 from .monitoring.metrics import MetricsCollector
 from .monitoring.alerts import AlertManager
+from .monitoring.dynamic_adaptation import DynamicAdaptation
 
 logger = setup_logger(__name__)
 
@@ -162,6 +163,29 @@ class HoneyPromptSystem:
             'total_detections': self.metrics.metrics['detections']['total']
         }
 
+    async def run_async(args=None):
+        system = HoneyPromptSystem(args.env)
+        if not await system.start():
+            logger.error("System startup failed")
+            return
+
+        # Start dynamic adaptation as a background task.
+        adaptation = DynamicAdaptation(system.metrics, system.orchestrator, adaptation_interval=60)
+        adaptation_task = asyncio.create_task(adaptation.run())
+
+        try:
+            # Your interactive loop or single text analysis.
+            # ...
+            while True:
+                command = input("Command> ").strip().lower()
+                # Process commands...
+        except KeyboardInterrupt:
+            pass
+        finally:
+            adaptation.running = False
+            await adaptation_task
+            await system.stop()
+
     async def stop(self):
         """Gracefully shut down the system."""
         if self.is_initialized:
@@ -234,7 +258,12 @@ def main():
 
             while True:
                 try:
-                    command = input("\nCommand> ").strip().lower()
+                    user_input = input("\nCommand> ")
+                    # If the input is empty (or only whitespace), ignore it and continue.
+                    if not user_input.strip():
+                        continue
+
+                    command = user_input.strip().lower()
 
                     if command == 'quit':
                         break
