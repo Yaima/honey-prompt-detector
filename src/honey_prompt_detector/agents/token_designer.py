@@ -61,7 +61,21 @@ class TokenDesignerAgent:
 
         except Exception as e:
             logger.error(f"Token generation failed: {str(e)}")
-            return None
+            # Fallback option: use a default token if desired.
+            default_token_design = {
+                "base_token": "default_honey_token",
+                "variations": ["default_honey_token"],
+                "detection_rules": {
+                    "exact_match_weight": 1.0,
+                    "variation_match_weight": 0.8,
+                    "context_importance": 0.7,
+                    "minimum_confidence": 0.6
+                },
+                "category": "direct_injection",
+                "sensitivity": 0.9,
+                "expected_context": "default expected usage context"
+            }
+            return self._create_honey_prompt(default_token_design, system_context)
 
     def _get_system_prompt(self) -> str:
         """Create the system prompt for the token designer."""
@@ -98,17 +112,23 @@ class TokenDesignerAgent:
         }}
         """
 
-    def _create_honey_prompt(
-            self,
-            token_design: Dict[str, Any],
-            system_context: str
-    ) -> HoneyPrompt:
-        """Create a HoneyPrompt instance from the generated design."""
+    def _create_honey_prompt(self, token_design: Dict[str, Any], system_context: str) -> HoneyPrompt:
+        # Optionally, augment the variations list with additional obfuscations
+        base_token = token_design['base_token']
+        additional_variations = [
+            " ".join(list(base_token)),  # insert spaces between characters
+            ".".join(list(base_token)),  # insert dots between characters
+            base_token.upper(),  # all uppercase
+            base_token.lower()  # all lowercase
+        ]
+        # Merge the provided variations with the additional ones
+        all_variations = list(set(token_design.get('variations', []) + additional_variations))
+
         return HoneyPrompt(
-            base_token=token_design['base_token'],
+            base_token=base_token,
             category=token_design['category'],
             sensitivity=token_design['sensitivity'],
             context=token_design['expected_context'],
-            variations=token_design['variations'],
+            variations=all_variations,
             detection_rules=token_design['detection_rules']
         )
