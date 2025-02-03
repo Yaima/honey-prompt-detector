@@ -179,7 +179,7 @@ Detection Details:
 
 {alert_message.get('additional_context', '')}
 
-This is an automated alert from the Honey-Prompt Detection System.
+This is an automated alert from the Honey-Prompt Detector.
 """
 
     def _format_alert_for_slack(self, alert_message: Dict[str, Any]) -> str:

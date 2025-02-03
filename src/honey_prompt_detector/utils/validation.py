@@ -36,7 +36,7 @@ class ValidationResult:
 
 class InputValidator:
     """
-    Validates inputs for the honey-prompt detection system.
+    Validates inputs for the honey-prompt detector.
 
     This class provides comprehensive validation for all inputs to ensure
     they meet system requirements and constraints. It helps prevent errors
