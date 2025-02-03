@@ -37,7 +37,7 @@ except ImportError:
 
 class ExperimentRunner:
     """
-    Runs comprehensive experiments with the honey-prompt detection system
+    Runs comprehensive experiments with the honey-prompt detector
     to demonstrate proactive detection, context-aware evaluation,
     lightweight design, dynamic adaptation, and scalable integration.
     """
@@ -95,8 +95,8 @@ class ExperimentRunner:
     async def run_experiments(self) -> Dict[str, Any]:
         system = HoneyPromptSystem()
         if not await system.start():
-            raise RuntimeError("Failed to initialize honey-prompt detection system")
-        print("\nRunning Honey-Prompt Detection Experiments")
+            raise RuntimeError("Failed to initialize honey-prompt detector")
+        print("\nRunning Honey-Prompt Detector")
         print("=========================================")
 
         # Run test cases for each category concurrently.

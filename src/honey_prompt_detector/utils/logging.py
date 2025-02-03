@@ -94,7 +94,7 @@ SECURITY_LOG_MESSAGES = {
     'token_detection': 'Detected honey-prompt token: {token_hash} (confidence: {confidence})',
     'attack_detected': 'ALERT: Potential prompt injection attack detected! Confidence: {confidence}',
     'false_positive': 'False positive detection recorded for token: {token_hash}',
-    'system_startup': 'Honey-prompt detection system initialized with {num_tokens} tokens',
+    'system_startup': 'Honey-Prompt detector initialized with {num_tokens} tokens',
     'api_error': 'API error during {operation}: {error}',
     'config_error': 'Configuration error: {error}',
 }

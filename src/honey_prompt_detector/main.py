@@ -134,7 +134,7 @@ class HoneyPromptSystem:
 
         try:
             # Interactive loop
-            print("\nHoney-Prompt Detection System")
+            print("\nHoney-Prompt Detector")
             print("===========================")
             print("Enter text to analyze (or 'quit' to exit)")
             print("Commands:")
@@ -188,17 +188,17 @@ class HoneyPromptSystem:
     async def stop(self):
         """Gracefully shut down the system."""
         if self.is_initialized:
-            logger.info("Shutting down honey-prompt detection system")
+            logger.info("Shutting down honey-prompt detector")
             self.metrics.save_metrics()
             self.is_initialized = False
 
 
 def main():
     """
-    Synchronous entry point for the Honey-Prompt Detection System.
+    Synchronous entry point for the Honey-Prompt Detector.
     Parses CLI arguments and then calls an async function to run the system.
     """
-    parser = argparse.ArgumentParser(description="Honey-Prompt Detection System")
+    parser = argparse.ArgumentParser(description="Honey-Prompt Detector")
     parser.add_argument("--env", type=Path, help="Path to .env file")
     parser.add_argument("--text", type=str, help="Text to analyze")
     parser.add_argument("--run-experiments", action="store_true", help="Run comprehensive experiments")
@@ -231,7 +231,7 @@ def main():
             elif 'error' in result:
                 print(f"Error: {result['error']}")
         else:
-            print("\nHoney-Prompt Detection System")
+            print("\nHoney-Prompt Detector")
             print("===========================")
             print("Enter text to analyze (or 'quit' to exit)")
             print("Commands:")

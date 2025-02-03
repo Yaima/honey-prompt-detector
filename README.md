@@ -25,7 +25,7 @@
 
 ## Overview
 
-Honey-Prompt Detector addresses the vulnerability of LLMs to prompt injection attacks—malicious inputs that override hidden instructions, potentially exposing sensitive data or altering intended behaviors. Unlike many current defenses that are primarily post‑hoc (e.g., filtering or watermarking), HIVE is designed for proactive, real-time detection and dynamic adaptation.
+Honey-Prompt Detector addresses the vulnerability of LLMs to prompt injection attacks—malicious inputs that override hidden instructions, potentially exposing sensitive data or altering intended behaviors. Unlike many current defenses that are primarily post‑hoc (e.g., filtering or watermarking), Honey-Prompt Detector is designed for proactive, real-time detection and dynamic adaptation.
 
 ---
 
@@ -65,7 +65,7 @@ Honey-Prompt Detector addresses the vulnerability of LLMs to prompt injection at
 
 ## Architecture and Multi-Agent Design
 
-HIVE is built using a modular, multi-agent approach:
+Honey-Prompt Detector is built using a modular, multi-agent approach:
 
 - **TokenDesignerAgent:**  
   Dynamically generates unique honey‑prompt tokens and variations using a GPT-based API. These tokens are then embedded into the LLM’s hidden instructions.
@@ -187,13 +187,13 @@ Follow these steps to set up the project:
     ```text
     usage: main.py [-h] [--env ENV] [--text TEXT] [--run-experiments]
     
-    Honey-Prompt Detection System
+    Honey-Prompt Detector
 
     ```
 
 ## Configuration
 
-The Honey-Prompt Detection System allows you to configure various aspects through environment variables and command-line arguments.
+The Honey-Prompt Detector allows you to configure various aspects through environment variables and command-line arguments.
 
 ### Environment Variables
 
@@ -220,7 +220,7 @@ When running the system, you can pass arguments to control its behavior:
 Example response:
 
 ```text
-Honey-Prompt Detection System
+Honey-Prompt Detector
 ===========================
 Enter text to analyze (or 'quit' to exit)
 Commands:
@@ -255,7 +255,7 @@ Risk Level: high
 4. **Alerts:**  
    High-risk detections trigger alerts (via email, Slack, etc.), and performance metrics are recorded for ongoing analysis.
 
-### Flow Diagram
+### Diagram
 
 1. User input → **Orchestrator**:
    - (a) Honey-prompt match?  
@@ -268,7 +268,7 @@ Risk Level: high
 
 ## Testing & Experiments
 
-The Honey-Prompt Detection System can be evaluated using predefined experiments or custom test cases. This section explains how to run tests, view results, and validate system performance.
+The Honey-Prompt Detector can be evaluated using predefined experiments or custom test cases. This section explains how to run tests, view results, and validate system performance.
 
 ---
 
@@ -284,7 +284,7 @@ These experiments test:
 
 - **Benign Queries**: Inputs that should not trigger detection.
 - **Direct Injection**: Clear and direct attempts to override system instructions.
-- **Obfuscated Injectio**n: Attempts using spacing, punctuation, or synonyms to evade detection.
+- **Obfuscated Injection**: Attempts using spacing, punctuation, or synonyms to evade detection.
 - **Context Manipulation**: Attempts to manipulate the system by redefining its instructions.
 
 Example output:
@@ -339,7 +339,7 @@ Then rerun experiments with:
 
 ## Alerts & Monitoring
 
-The Honey-Prompt Detection System includes tools for real-time alerts and performance monitoring to ensure prompt injection attacks are detected and handled efficiently.
+The Honey-Prompt Detector includes tools for real-time alerts and performance monitoring to ensure prompt injection attacks are detected and handled efficiently.
 
 ---
 
@@ -406,7 +406,7 @@ for alert in recent_alerts:
 
 ## Contributing
 
-We welcome contributions to improve the Honey-Prompt Detection System! Whether it’s fixing a bug, adding new features, or improving documentation, your contributions are greatly appreciated. However, **please reach out to us first** before starting any major changes, so we can align on scope and avoid duplicate work.
+We welcome contributions to improve the Honey-Prompt Detector! Whether it’s fixing a bug, adding new features, or improving documentation, your contributions are greatly appreciated. However, **please reach out to us first** before starting any major changes, so we can align on scope and avoid duplicate work.
 
 ---
 

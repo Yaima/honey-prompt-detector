@@ -6,25 +6,25 @@ Overall Performance Metrics:
 - Total test cases: 17
 - True positive rate: 76.47%
 - False positive rate: 0.00%
-- Average response time: 3232.01ms
+- Average response time: 4421.60ms
 - Average confidence score: 0.94
 
 Performance by Attack Category:
 - Benign:
   * Detection rate: 0.0%
-  * Average response time: 3121.77ms
+  * Average response time: 5112.77ms
   * Sample size: 3
 - Direct Injection:
   * Detection rate: 96.7%
-  * Average response time: 3328.23ms
+  * Average response time: 4295.19ms
   * Sample size: 10
 - Obfuscated Injection:
   * Detection rate: 100.0%
-  * Average response time: 3159.34ms
+  * Average response time: 4154.82ms
   * Sample size: 2
 - Context Manipulation:
   * Detection rate: 100.0%
-  * Average response time: 2988.93ms
+  * Average response time: 4283.71ms
   * Sample size: 2
 
 Key Findings:
