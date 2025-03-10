@@ -1,3 +1,4 @@
+import base64
 from typing import Dict, Any, List
 import logging
 
@@ -56,15 +57,20 @@ class DetectionOrchestrator:
     async def monitor_text(self, text: str) -> Dict[str, Any]:
         """
         Monitor text for potential prompt injection attacks.
-
-        1) Check if text contains any honey prompt token.
-        2) If no token is matched, use the context evaluator on the entire text.
+        Decodes Base64 input if detected before analysis.
         """
-        # 1) Check for honey token matches
+        original_text = text
+        text = self._decode_base64_if_needed(text)
+
+        if original_text != text:
+            logger.info("Base64 input detected and decoded.")
+
+        # Proceed with existing honey token matching logic
         for honey_prompt in self.honey_prompts:
             match_result = honey_prompt.matches_text(text)
             if match_result['matched']:
-                context_window = self._extract_context(text, honey_prompt.base_token, self.config.context_window_size)
+                context_window = self._extract_context(
+                    text, honey_prompt.base_token, self.config.context_window_size)
                 evaluation = await self.context_evaluator.evaluate_detection(
                     text=text,
                     token=honey_prompt.base_token,
@@ -77,23 +83,39 @@ class DetectionOrchestrator:
                         'confidence': evaluation.get('confidence', 0.9),
                         'explanation': evaluation.get('explanation', ''),
                         'risk_level': evaluation.get('risk_level', 'high'),
-                        'token_hash': honey_prompt.token_hash
+                        'token_hash': honey_prompt.token_hash,
+                        'was_base64_encoded': original_text != text
                     }
-        # 2) Fallback: Evaluate the entire text
+
+        # Fallback: Evaluate entire text
         evaluation = await self.context_evaluator.evaluate_detection(
             text=text,
             token="(no_token)",
             surrounding_context=text,
             expected_context=""
         )
-        if evaluation.get('is_attack'):
-            return {
-                'detection': True,
-                'confidence': evaluation.get('confidence', 0.9),
-                'explanation': evaluation.get('explanation', ''),
-                'risk_level': evaluation.get('risk_level', 'high'),
-            }
-        return {'detection': False, 'confidence': evaluation.get('confidence', 0.0)}
+        return {
+            'detection': evaluation.get('is_attack', False),
+            'confidence': evaluation.get('confidence', 0.0),
+            'explanation': evaluation.get('explanation', ''),
+            'risk_level': evaluation.get('risk_level', 'low'),
+            'was_base64_encoded': original_text != text
+        }
+
+    def _decode_base64_if_needed(self, text: str) -> str:
+        try:
+            # Only attempt decoding if it looks Base64-encoded
+            if self._looks_like_base64(text):
+                decoded_bytes = base64.b64decode(text, validate=True)
+                return decoded_bytes.decode('utf-8')
+        except (base64.binascii.Error, UnicodeDecodeError, ValueError):
+            pass  # If decoding fails, simply return original text
+        return text
+
+    def _looks_like_base64(self, text: str) -> bool:
+        # A simple check for Base64 encoding validity
+        import re
+        return bool(re.match(r'^[A-Za-z0-9+/]+={0,2}$', text))
 
     async def sanitize_and_monitor_text(self, external_inputs: List[str]) -> List[Dict[str, Any]]:
         """

@@ -3,29 +3,29 @@ Experimental Results Summary
 ===========================
 
 Overall Performance Metrics:
-- Total test cases: 31
-- True positive rate: 87.10%
+- Total test cases: 45
+- True positive rate: 93.33%
 - False positive rate: 0.00%
-- Average response time: 2876.17ms
+- Average response time: 3347.61ms
 - Average confidence score: 1.00
 
 Performance by Attack Category:
 - Benign:
   * Detection rate: 0.0%
-  * Average response time: 3378.57ms
+  * Average response time: 3468.11ms
   * Sample size: 3
 - Direct Injection:
   * Detection rate: 100.0%
-  * Average response time: 2827.64ms
+  * Average response time: 3462.31ms
   * Sample size: 10
 - Obfuscated Injection:
   * Detection rate: 100.0%
-  * Average response time: 2842.41ms
-  * Sample size: 13
+  * Average response time: 3341.17ms
+  * Sample size: 23
 - Context Manipulation:
-  * Detection rate: 86.7%
-  * Average response time: 2759.59ms
-  * Sample size: 5
+  * Detection rate: 100.0%
+  * Average response time: 3196.45ms
+  * Sample size: 9
 
 Key Findings:
 1. The system demonstrated robust detection of direct injection attempts
