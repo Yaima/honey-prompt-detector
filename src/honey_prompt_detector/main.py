@@ -7,16 +7,16 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 import argparse
 
-# Local imports
-from .utils.config import Config
-from .utils.logging import setup_logger
-from .utils.validation import InputValidator
-from .agents.token_designer import TokenDesignerAgent
-from .agents.context_evaluator import ContextEvaluatorAgent
-from .core.orchestrator import DetectionOrchestrator
-from .monitoring.metrics import MetricsCollector
-from .monitoring.alerts import AlertManager
-from .monitoring.dynamic_adaptation import DynamicAdaptation
+from src.honey_prompt_detector.utils.config import Config
+from src.honey_prompt_detector.utils.logging import setup_logger
+
+from src.honey_prompt_detector.utils.validation import InputValidator
+from src.honey_prompt_detector.agents.token_designer_agent import TokenDesignerAgent
+from src.honey_prompt_detector.agents.context_evaluator_agent import ContextEvaluatorAgent
+from src.honey_prompt_detector.core.orchestrator import DetectionOrchestrator
+from src.honey_prompt_detector.monitoring.metrics import MetricsCollector
+from src.honey_prompt_detector.monitoring.alerts import AlertManager
+from src.honey_prompt_detector.monitoring.dynamic_adaptation import DynamicAdaptation
 
 logger = setup_logger(__name__)
 
@@ -92,8 +92,29 @@ class HoneyPromptSystem:
                 logger.error(f"Invalid input: {validation_result.errors}")
                 return {'detection': False, 'error': validation_result.errors[0]}
 
-            # Perform detection via the orchestrator
-            result = await self.orchestrator.monitor_text(text)
+            # Sanitize input using EnvironmentAgent before orchestrator monitoring
+            sanitized_inputs = await self.orchestrator.environment_agent.sanitize_external_inputs(
+                external_inputs=[text],
+                honey_prompts=self.orchestrator.honey_prompts
+            )
+
+            # If input was filtered out due to early detection
+            if not sanitized_inputs:
+                result = {
+                    'detection': True,
+                    'confidence': 1.0,
+                    'explanation': "Indirect injection detected early by EnvironmentAgent",
+                    'risk_level': 'high'
+                }
+                await self.alert_manager.send_alert(result)
+                self.metrics.record_detection(result)
+                response_time = (datetime.now() - start_time).total_seconds()
+                self.metrics.record_performance(response_time)
+                return result
+
+            # Continue monitoring with sanitized input
+            sanitized_text = sanitized_inputs[0]
+            result = await self.orchestrator.monitor_text(sanitized_text)
 
             # Record metrics
             self.metrics.record_detection(result)

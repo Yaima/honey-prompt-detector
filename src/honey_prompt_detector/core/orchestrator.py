@@ -1,7 +1,9 @@
 from typing import Dict, Any, List
 import logging
-from ..agents.token_designer import TokenDesignerAgent
-from ..agents.context_evaluator import ContextEvaluatorAgent
+
+from ..agents.environment_agent import EnvironmentAgent
+from ..agents.token_designer_agent import TokenDesignerAgent
+from ..agents.context_evaluator_agent import ContextEvaluatorAgent
 from ..core.honey_prompt import HoneyPrompt
 from ..core.detector import Detector  # Import the Detector
 
@@ -36,6 +38,7 @@ class DetectionOrchestrator:
         self.config = config
         self.honey_prompts: List[HoneyPrompt] = []
         self.detector = Detector()  # Expose the Detector instance
+        self.environment_agent = EnvironmentAgent(similarity_model_name=self.config.similarity_model_name)
 
     async def initialize_system(self) -> None:
         """Set up initial honey-prompts for detection."""
@@ -91,6 +94,45 @@ class DetectionOrchestrator:
                 'risk_level': evaluation.get('risk_level', 'high'),
             }
         return {'detection': False, 'confidence': evaluation.get('confidence', 0.0)}
+
+    async def sanitize_and_monitor_text(self, external_inputs: List[str]) -> List[Dict[str, Any]]:
+        """
+        Integrates the EnvironmentAgent directly for pre-processing inputs
+        before running through LLM and context evaluation.
+        """
+        # Initialize if needed
+        if not hasattr(self, 'honey_prompts') or not self.honey_prompts:
+            await self.initialize_system()
+
+        # Extract tokens for embedding
+        honey_tokens = [hp.base_token for hp in self.honey_prompts]
+
+        # Use EnvironmentAgent to embed and detect early injections
+        embedded_and_sanitized_inputs = self.environment_agent.embed_environment_tokens(
+            inputs=external_inputs, honey_tokens=honey_tokens
+        )
+
+        indirect_injections = self.environment_agent.detect_indirect_injections(
+            inputs=embedded_and_sanitized_inputs,
+            honey_tokens=honey_tokens,
+            threshold=0.85
+        )
+
+        final_inputs = []
+        for input_text, injection_detected in zip(embedded_and_sanitized_inputs, indirect_injections):
+            if injection_detected:
+                logger.warning(f"Indirect injection detected by EnvironmentAgent: {input_text}")
+                await self.alert_manager.send_alert({
+                    'detection': True,
+                    'confidence': 1.0,
+                    'explanation': "Indirect injection detected early by EnvironmentAgent",
+                    'risk_level': 'high'
+                })
+                continue
+            final_sanitized_input = self.output_sanitizer.sanitize(input_text)
+            final_inputs.append(final_sanitized_input)  # Corrected, use final_inputs
+
+        return [await self.monitor_text(text) for text in final_inputs]
 
     def _extract_context(self, text: str, token: str, window_size: int) -> str:
         """Extract text surrounding a token match."""

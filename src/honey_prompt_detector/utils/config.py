@@ -93,6 +93,7 @@ class Config:
 
         self._validate_environment()
         self._load_configuration()
+        self.similarity_model_name = 'all-MiniLM-L6-v2'
 
         logger.info("Configuration loaded successfully")
 
