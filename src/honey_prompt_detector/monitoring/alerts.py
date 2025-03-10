@@ -103,16 +103,12 @@ class AlertManager:
 
     def _create_alert_message(self, detection_info: Dict[str, Any], alert_level: str,
                               additional_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Create a structured alert message with all relevant information."""
         timestamp = datetime.now().isoformat()
         message = {
             'alert_id': f"ALERT_{timestamp}_{alert_level}",
             'timestamp': timestamp,
             'alert_level': alert_level,
             'detection_info': detection_info,
-            'confidence': detection_info.get('confidence', 0.0),
-            'match_type': detection_info.get('match_type', 'unknown'),
-            'context': detection_info.get('context', '')
         }
         if additional_context:
             message['additional_context'] = additional_context
@@ -120,9 +116,10 @@ class AlertManager:
 
     async def _send_email_alert(self, alert_message: Dict[str, Any], email_settings: Dict[str, Any]) -> None:
         """Send alert via email asynchronously using aiosmtplib."""
-        # Use aiosmtplib if available; otherwise, raise an error.
         if async_send is None:
             raise RuntimeError("aiosmtplib is not installed; cannot send email asynchronously.")
+
+        assert callable(async_send), "async_send should be callable here."
 
         try:
             msg = MIMEText(self._format_alert_for_email(alert_message), 'plain')
@@ -207,6 +204,9 @@ This is an automated alert from the Honey-Prompt Detector.
     def _save_alert_history(self) -> None:
         """Save the alert history to file."""
         try:
+            # Ensure the directory exists
+            self.alert_history_file.parent.mkdir(parents=True, exist_ok=True)
+
             with open(self.alert_history_file, 'w') as f:
                 json.dump(self.alert_history, f, indent=2)
         except Exception as e:

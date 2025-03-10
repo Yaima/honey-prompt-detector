@@ -9,8 +9,8 @@ logger = setup_logger(__name__)
 
 class ContextEvaluatorAgent:
     """
-    Evaluates text inputs for potential prompt injection attacks using a GPT-based agent,
-    combined with semantic similarity checks using a SentenceTransformer model.
+    Uses GPT models via OpenAI API for evaluating potential attacks.
+    Uses SentenceTransformer models for semantic similarity checks.
     """
 
     def __init__(self, api_key: str, model_name: str = "gpt-4", similarity_model_name: str = 'all-MiniLM-L6-v2'):

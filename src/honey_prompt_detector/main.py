@@ -7,47 +7,33 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 import argparse
 
-from src.honey_prompt_detector.utils.config import Config
-from src.honey_prompt_detector.utils.logging import setup_logger
-
 from src.honey_prompt_detector.utils.validation import InputValidator
 from src.honey_prompt_detector.agents.token_designer_agent import TokenDesignerAgent
 from src.honey_prompt_detector.agents.context_evaluator_agent import ContextEvaluatorAgent
 from src.honey_prompt_detector.core.orchestrator import DetectionOrchestrator
 from src.honey_prompt_detector.monitoring.metrics import MetricsCollector
 from src.honey_prompt_detector.monitoring.alerts import AlertManager
-from src.honey_prompt_detector.monitoring.dynamic_adaptation import DynamicAdaptation
+from src.honey_prompt_detector.utils.logging import setup_logger
+from src.honey_prompt_detector.utils.config import Config
 
-logger = setup_logger(__name__)
+config = Config()
+logger = setup_logger(
+    name=__name__,
+    log_file=config.log_file,
+    level=config.log_level,
+    retention_days=config.retention_days
+)
 
+
+from src.honey_prompt_detector.core.self_tuner import SelfTunerAgent
 
 class HoneyPromptSystem:
-    """
-    Represents a system for detecting prompt injection attacks using various
-    AI-based agents and metrics collection.
-
-    The HoneyPromptSystem class is responsible for initializing, starting,
-    monitoring, and managing the detection of potential prompt injection
-    attacks. It orchestrates multiple components, such as token design,
-    context evaluation, alert management, and performance metrics tracking.
-
-    Attributes:
-      config: Configuration settings.
-      token_designer: Agent to generate honey-prompt tokens.
-      context_evaluator: Primary agent for LLM-based evaluation.
-      metrics: Metrics collector.
-      alert_manager: Manager for alerts.
-      orchestrator: Coordinates token embedding, evaluation, and detection.
-      is_initialized: Indicates whether the system has been initialized.
-    """
     def __init__(self, env_path: Optional[Path] = None, custom_config: Optional[Dict[str, Any]] = None):
-        # Load and validate configuration
         self.config = Config(env_path)
         if custom_config:
             for key, value in custom_config.items():
                 setattr(self.config, key, value)
 
-        # Initialize components
         self.token_designer = TokenDesignerAgent(
             api_key=self.config.openai_api_key,
             model_name=self.config.model_name
@@ -56,15 +42,23 @@ class HoneyPromptSystem:
             api_key=self.config.openai_api_key,
             model_name=self.config.model_name
         )
-        self.metrics = MetricsCollector(metrics_file=Path('detection_metrics.json'))
+        self.metrics = MetricsCollector(metrics_file=self.config.metrics_file)
         self.alert_manager = AlertManager(self.config.as_dict().get('alert_settings', {}))
         self.orchestrator = DetectionOrchestrator(
             token_designer=self.token_designer,
             context_evaluator=self.context_evaluator,
             config=self.config
         )
+
+        # Self Tuner initialization
+        self.self_tuner = SelfTunerAgent(
+            detector_agent=self.orchestrator.detector,
+            config=self.config
+        )
+
         self.is_initialized = False
         logger.info("HoneyPromptSystem initialized")
+
 
     async def start(self) -> bool:
         """Initialize system components and start the system."""
@@ -78,27 +72,18 @@ class HoneyPromptSystem:
             logger.error(f"Failed to start system: {str(e)}")
             return False
 
-    async def monitor_text(self, text: str) -> Dict[str, Any]:
-        """Monitor text for potential prompt injection attacks."""
+    async def monitor_text(self, text: str, expected_detection: Optional[bool] = None) -> Dict[str, Any]:
         if not self.is_initialized:
             raise RuntimeError("System not initialized. Call start() first.")
 
         start_time = datetime.now()
 
         try:
-            # Validate input
-            validation_result = InputValidator.validate_text_input(text)
-            if not validation_result.is_valid:
-                logger.error(f"Invalid input: {validation_result.errors}")
-                return {'detection': False, 'error': validation_result.errors[0]}
-
-            # Sanitize input using EnvironmentAgent before orchestrator monitoring
             sanitized_inputs = await self.orchestrator.environment_agent.sanitize_external_inputs(
                 external_inputs=[text],
                 honey_prompts=self.orchestrator.honey_prompts
             )
 
-            # If input was filtered out due to early detection
             if not sanitized_inputs:
                 result = {
                     'detection': True,
@@ -106,22 +91,19 @@ class HoneyPromptSystem:
                     'explanation': "Indirect injection detected early by EnvironmentAgent",
                     'risk_level': 'high'
                 }
-                await self.alert_manager.send_alert(result)
-                self.metrics.record_detection(result)
-                response_time = (datetime.now() - start_time).total_seconds()
-                self.metrics.record_performance(response_time)
-                return result
+            else:
+                result = await self.orchestrator.monitor_text(sanitized_inputs[0])
 
-            # Continue monitoring with sanitized input
-            sanitized_text = sanitized_inputs[0]
-            result = await self.orchestrator.monitor_text(sanitized_text)
-
-            # Record metrics
             self.metrics.record_detection(result)
+
+            if expected_detection is not None:
+                self.self_tuner.update_metrics(result, expected_detection)
+                new_threshold = self.self_tuner.adjust_threshold_if_needed()
+                logger.info(f"Adjusted detection threshold: {new_threshold}")
+
             response_time = (datetime.now() - start_time).total_seconds()
             self.metrics.record_performance(response_time)
 
-            # Send alert if an attack is detected
             if result['detection']:
                 await self.alert_manager.send_alert(result)
 
@@ -129,7 +111,8 @@ class HoneyPromptSystem:
 
         except Exception as e:
             logger.error(f"Error monitoring text: {str(e)}")
-            self.metrics.record_performance((datetime.now() - start_time).total_seconds(), is_error=True)
+            response_time = (datetime.now() - start_time).total_seconds()
+            self.metrics.record_performance(response_time, is_error=True)
             return {'detection': False, 'error': str(e), 'confidence': 0.0}
 
     async def get_system_status(self) -> Dict[str, Any]:
@@ -143,68 +126,62 @@ class HoneyPromptSystem:
             'total_detections': self.metrics.metrics.get('detections', {}).get('total', 0)
         }
 
-    async def run_async(args=None):
-        system = HoneyPromptSystem(args.env)
-        if not await system.start():
-            logger.error("System startup failed")
-            return
-
-        # Start dynamic adaptation as a background task.
-        adaptation = DynamicAdaptation(system.metrics, system.orchestrator, adaptation_interval=60)
-        adaptation_task = asyncio.create_task(adaptation.run())
-
-        try:
-            # Interactive loop
-            print("\nHoney-Prompt Detector")
-            print("===========================")
-            print("Enter text to analyze (or 'quit' to exit)")
-            print("Commands:")
-            print("  status  - Show system status")
-            print("  metrics - Show current metrics")
-            print("  quit    - Exit the system")
-
-            while True:
-                user_input = input("\nCommand> ")
-                if not user_input.strip():
-                    continue  # Ignore empty input
-
-                command = user_input.strip().lower()
-
-                if command == 'quit':
-                    break
-                elif command == 'status':
-                    status = await system.get_system_status()
-                    print("\nSystem Status:")
-                    print("--------------")
-                    for key, value in status.items():
-                        print(f"{key}: {value}")
-                elif command == 'metrics':
-                    metrics = system.metrics.get_summary()
-                    print("\nSystem Metrics:")
-                    print("--------------")
-                    print(json.dumps(metrics, indent=2))
-                else:
-                    result = await system.monitor_text(command)
-                    if result.get('error'):
-                        print(f"Error: {result['error']}")
-                    elif result['detection']:
-                        print("\n⚠️  Potential prompt injection detected!")
-                        print(f"Confidence: {result['confidence']:.2f}")
-                        print(f"Explanation: {result.get('explanation', 'None provided')}")
-                        print(f"Risk Level: {result.get('risk_level', 'Unknown')}")
-                    else:
-                        print("No prompt injection detected")
-
-        except KeyboardInterrupt:
-            pass
-        except Exception as e:
-            print(f"Error: {str(e)}")
-
-        # Cleanup and shutdown
-        adaptation.running = False
-        await adaptation_task
-        await system.stop()
-        print("\nSystem shutdown complete")
+    # async def run_async(args=None):
+    #     system = HoneyPromptSystem(args.env)
+    #     if not await system.start():
+    #         logger.error("System startup failed")
+    #         return
+    #
+    #     try:
+    #         # Interactive loop
+    #         print("\nHoney-Prompt Detector")
+    #         print("===========================")
+    #         print("Enter text to analyze (or 'quit' to exit)")
+    #         print("Commands:")
+    #         print("  status  - Show system status")
+    #         print("  metrics - Show current metrics")
+    #         print("  quit    - Exit the system")
+    #
+    #         while True:
+    #             user_input = input("\nCommand> ")
+    #             if not user_input.strip():
+    #                 continue  # Ignore empty input
+    #
+    #             command = user_input.strip().lower()
+    #
+    #             if command == 'quit':
+    #                 break
+    #             elif command == 'status':
+    #                 status = await system.get_system_status()
+    #                 print("\nSystem Status:")
+    #                 print("--------------")
+    #                 for key, value in status.items():
+    #                     print(f"{key}: {value}")
+    #             elif command == 'metrics':
+    #                 metrics = system.metrics.get_summary()
+    #                 print("\nSystem Metrics:")
+    #                 print("--------------")
+    #                 print(json.dumps(metrics, indent=2))
+    #             else:
+    #                 result = await system.monitor_text(command)
+    #                 if result.get('error'):
+    #                     print(f"Error: {result['error']}")
+    #                 elif result['detection']:
+    #                     print("\n⚠️  Potential prompt injection detected!")
+    #                     print(f"Confidence: {result['confidence']:.2f}")
+    #                     print(f"Explanation: {result.get('explanation', 'None provided')}")
+    #                     print(f"Risk Level: {result.get('risk_level', 'Unknown')}")
+    #                 else:
+    #                     print("No prompt injection detected")
+    #
+    #     except KeyboardInterrupt:
+    #         pass
+    #     except Exception as e:
+    #         print(f"Error: {str(e)}")
+    #
+    #     # Cleanup and shutdown
+    #     await system.stop()
+    #     print("\nSystem shutdown complete")
 
     async def stop(self):
         """Gracefully shut down the system."""
@@ -215,10 +192,6 @@ class HoneyPromptSystem:
 
 
 def main():
-    """
-    Synchronous entry point for the Honey-Prompt Detector.
-    Parses CLI arguments and then calls an async function to run the system.
-    """
     parser = argparse.ArgumentParser(description="Honey-Prompt Detector")
     parser.add_argument("--env", type=Path, help="Path to .env file")
     parser.add_argument("--text", type=str, help="Text to analyze")
@@ -228,13 +201,11 @@ def main():
 
     async def run_async():
         if args.run_experiments:
-            # Import and run experiments from the examples module.
-            from examples.basic_usage import ExperimentRunner
+            from test.basic_usage import ExperimentRunner
             experiment = ExperimentRunner()
             await experiment.run_experiments()
             return
 
-        # Otherwise, run the system interactively or for a single text analysis.
         system = HoneyPromptSystem(args.env)
         if not await system.start():
             logger.error("System startup failed")
@@ -262,24 +233,22 @@ def main():
 
             while True:
                 try:
-                    user_input = input("\nCommand> ")
-                    if not user_input.strip():
+                    user_input = input("\nCommand> ").strip()
+                    if not user_input:
                         continue
 
-                    command = user_input.strip().lower()
+                    command = user_input.lower()
 
                     if command == 'quit':
                         break
                     elif command == 'status':
                         status = await system.get_system_status()
                         print("\nSystem Status:")
-                        print("--------------")
                         for key, value in status.items():
                             print(f"{key}: {value}")
                     elif command == 'metrics':
                         metrics = system.metrics.get_summary()
                         print("\nSystem Metrics:")
-                        print("--------------")
                         print(json.dumps(metrics, indent=2))
                     else:
                         result = await system.monitor_text(command)
@@ -292,7 +261,6 @@ def main():
                             print(f"Risk Level: {result.get('risk_level', 'Unknown')}")
                         else:
                             print("No prompt injection detected")
-
                 except KeyboardInterrupt:
                     break
                 except Exception as e:

@@ -6,6 +6,9 @@ from ..core.honey_prompt import HoneyPrompt
 logger = logging.getLogger(__name__)
 
 class EnvironmentAgent:
+    """
+    Uses SentenceTransformer models for semantic embedding and similarity checks.
+    """
     def __init__(self, similarity_model_name: str = 'all-MiniLM-L6-v2'):
         self.similarity_model = SentenceTransformer(similarity_model_name)
 

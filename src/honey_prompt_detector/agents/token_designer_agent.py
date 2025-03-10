@@ -11,8 +11,7 @@ logger = setup_logger(__name__)
 
 class TokenDesignerAgent:
     """
-    Generates honey-prompt tokens using OpenAI API with timeout and retries,
-    enhanced with robust error handling for JSON parsing.
+    Uses GPT models via OpenAI API for designing honey-prompt tokens.
     """
 
     def __init__(self, api_key: str, model_name: str = "gpt-4", timeout: int = 60):

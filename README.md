@@ -94,7 +94,7 @@ Below is a typical layout for this repository (some files or folders may differ 
 ```text
     honey-prompt-detector/
     ├── .venv/                      # Virtual environment (optional)
-    ├── docs/                       # Documentation, experiment results, summaries
+    ├── results/                       # Documentation, experiment results, summaries
     │   ├── experiment_results_analysis.json
     │   ├── experiment_results_raw.json
     │   └── paper_results_summary.txt
