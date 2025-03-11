@@ -1,10 +1,13 @@
 # src/honey_prompt_detector/monitoring/metrics.py
+import asyncio
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import logging
 from collections import defaultdict
 import json
 from pathlib import Path
+
+from src.honey_prompt_detector.utils.config import logger
 
 
 class MetricsCollector:

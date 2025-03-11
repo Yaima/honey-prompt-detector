@@ -3,7 +3,7 @@ from typing import Dict, Any
 from src.honey_prompt_detector.core.detector import Detector
 
 
-class SelfTunerAgent:
+class SelfTuner:
     """
     Uses heuristic logic to adjust thresholds based on false positives/negatives metrics, not direct AI usage.
     """

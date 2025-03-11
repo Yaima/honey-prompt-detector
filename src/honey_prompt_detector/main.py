@@ -10,7 +10,7 @@ import argparse
 from src.honey_prompt_detector.utils.validation import InputValidator
 from src.honey_prompt_detector.agents.token_designer_agent import TokenDesignerAgent
 from src.honey_prompt_detector.agents.context_evaluator_agent import ContextEvaluatorAgent
-from src.honey_prompt_detector.core.orchestrator import DetectionOrchestrator
+from src.honey_prompt_detector.core.orchestrator import Orchestrator
 from src.honey_prompt_detector.monitoring.metrics import MetricsCollector
 from src.honey_prompt_detector.monitoring.alerts import AlertManager
 from src.honey_prompt_detector.utils.logging import setup_logger
@@ -25,7 +25,7 @@ logger = setup_logger(
 )
 
 
-from src.honey_prompt_detector.core.self_tuner import SelfTunerAgent
+from src.honey_prompt_detector.core.self_tuner import SelfTuner
 
 class HoneyPromptSystem:
     def __init__(self, env_path: Optional[Path] = None, custom_config: Optional[Dict[str, Any]] = None):
@@ -44,14 +44,14 @@ class HoneyPromptSystem:
         )
         self.metrics = MetricsCollector(metrics_file=self.config.metrics_file)
         self.alert_manager = AlertManager(self.config.as_dict().get('alert_settings', {}))
-        self.orchestrator = DetectionOrchestrator(
+        self.orchestrator = Orchestrator(
             token_designer=self.token_designer,
             context_evaluator=self.context_evaluator,
             config=self.config
         )
 
         # Self Tuner initialization
-        self.self_tuner = SelfTunerAgent(
+        self.self_tuner = SelfTuner(
             detector_agent=self.orchestrator.detector,
             config=self.config
         )
@@ -59,13 +59,12 @@ class HoneyPromptSystem:
         self.is_initialized = False
         logger.info("HoneyPromptSystem initialized")
 
-
     async def start(self) -> bool:
-        """Initialize system components and start the system."""
         try:
             await self.orchestrator.initialize_system()
             self.is_initialized = True
             self.metrics.record_system_start()
+            asyncio.create_task(self.periodic_save_metrics())  # <-- Correct placement
             logger.info("System started successfully")
             return True
         except Exception as e:
@@ -126,69 +125,18 @@ class HoneyPromptSystem:
             'total_detections': self.metrics.metrics.get('detections', {}).get('total', 0)
         }
 
-    # async def run_async(args=None):
-    #     system = HoneyPromptSystem(args.env)
-    #     if not await system.start():
-    #         logger.error("System startup failed")
-    #         return
-    #
-    #     try:
-    #         # Interactive loop
-    #         print("\nHoney-Prompt Detector")
-    #         print("===========================")
-    #         print("Enter text to analyze (or 'quit' to exit)")
-    #         print("Commands:")
-    #         print("  status  - Show system status")
-    #         print("  metrics - Show current metrics")
-    #         print("  quit    - Exit the system")
-    #
-    #         while True:
-    #             user_input = input("\nCommand> ")
-    #             if not user_input.strip():
-    #                 continue  # Ignore empty input
-    #
-    #             command = user_input.strip().lower()
-    #
-    #             if command == 'quit':
-    #                 break
-    #             elif command == 'status':
-    #                 status = await system.get_system_status()
-    #                 print("\nSystem Status:")
-    #                 print("--------------")
-    #                 for key, value in status.items():
-    #                     print(f"{key}: {value}")
-    #             elif command == 'metrics':
-    #                 metrics = system.metrics.get_summary()
-    #                 print("\nSystem Metrics:")
-    #                 print("--------------")
-    #                 print(json.dumps(metrics, indent=2))
-    #             else:
-    #                 result = await system.monitor_text(command)
-    #                 if result.get('error'):
-    #                     print(f"Error: {result['error']}")
-    #                 elif result['detection']:
-    #                     print("\n⚠️  Potential prompt injection detected!")
-    #                     print(f"Confidence: {result['confidence']:.2f}")
-    #                     print(f"Explanation: {result.get('explanation', 'None provided')}")
-    #                     print(f"Risk Level: {result.get('risk_level', 'Unknown')}")
-    #                 else:
-    #                     print("No prompt injection detected")
-    #
-    #     except KeyboardInterrupt:
-    #         pass
-    #     except Exception as e:
-    #         print(f"Error: {str(e)}")
-    #
-    #     # Cleanup and shutdown
-    #     await system.stop()
-    #     print("\nSystem shutdown complete")
-
     async def stop(self):
         """Gracefully shut down the system."""
         if self.is_initialized:
             logger.info("Shutting down honey-prompt detector")
             self.metrics.save_metrics()
             self.is_initialized = False
+
+    async def periodic_save_metrics(self, interval_minutes: int = 10):
+        while self.is_initialized:
+            await asyncio.sleep(interval_minutes * 60)
+            self.metrics.save_metrics()
+            logger.info("Metrics saved periodically.")
 
 
 def main():

@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 import logging
 
 from ..agents.environment_agent import EnvironmentAgent
-from src.honey_prompt_detector.core.self_tuner import SelfTunerAgent
+from src.honey_prompt_detector.core.self_tuner import SelfTuner
 from ..agents.token_designer_agent import TokenDesignerAgent
 from ..agents.context_evaluator_agent import ContextEvaluatorAgent
 from ..core.honey_prompt import HoneyPrompt
@@ -13,7 +13,7 @@ from ..core.detector import Detector  # Import the Detector
 logger = logging.getLogger(__name__)
 
 
-class DetectionOrchestrator:
+class Orchestrator:
     """
     Coordinates detection logic for prompt injection attacks.
 
@@ -42,7 +42,7 @@ class DetectionOrchestrator:
         self.honey_prompts: List[HoneyPrompt] = []
         self.detector = Detector(context_evaluator=self.context_evaluator)
         self.environment_agent = EnvironmentAgent(similarity_model_name=self.config.similarity_model_name)
-        self.self_tuner = SelfTunerAgent(detector_agent=self.detector, config=config)
+        self.self_tuner = SelfTuner(detector_agent=self.detector, config=config)
         self.current_threshold = config.initial_threshold
 
     async def initialize_system(self) -> None:
