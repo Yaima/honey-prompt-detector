@@ -43,9 +43,9 @@ class Config:
 
     # Optional variables with their default values and types
     OPTIONAL_VARS = {
-        'MODEL_NAME': ('gpt-4o', str),
+        'MODEL_NAME': ('gpt-4o-mini', str),
         'TEMPERATURE': ('0.2', float),
-        'MAX_TOKENS': ('1000', int),
+        'MAX_TOKENS': ('150', int),
         'LOG_FILE': (f'logs/honey_prompt_detector_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log', str),
         'METRICS_FILE': (f'metrics/detection_metrics_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json', str),
         'RETENTION_DAYS': ('30', int),

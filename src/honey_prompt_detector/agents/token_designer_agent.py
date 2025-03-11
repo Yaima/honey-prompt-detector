@@ -14,7 +14,7 @@ class TokenDesignerAgent:
     Uses GPT models via OpenAI API for designing honey-prompt tokens.
     """
 
-    def __init__(self, api_key: str, model_name: str = "gpt-4", timeout: int = 60):
+    def __init__(self, api_key: str, model_name: str = "gpt-4o-mini", timeout: int = 60):
         self.client = AsyncOpenAI(api_key=api_key, timeout=timeout)
         self.model_name = model_name
         self.timeout = timeout

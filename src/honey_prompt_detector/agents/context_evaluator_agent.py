@@ -13,7 +13,7 @@ class ContextEvaluatorAgent:
     Uses SentenceTransformer models for semantic similarity checks.
     """
 
-    def __init__(self, api_key: str, model_name: str = "gpt-4", similarity_model_name: str = 'all-MiniLM-L6-v2'):
+    def __init__(self, api_key: str, model_name: str = "gpt-4o-mini", similarity_model_name: str = 'all-MiniLM-L6-v2'):
         self.client = AsyncOpenAI(api_key=api_key)
         self.model_name = model_name
         self.similarity_model = SentenceTransformer(similarity_model_name)
