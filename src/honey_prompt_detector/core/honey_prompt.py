@@ -7,33 +7,6 @@ import hashlib
 
 @dataclass
 class HoneyPrompt:
-    """
-    Represents a HoneyPrompt, which is a mechanism for detecting specific tokens
-    with variations and assessing the context in which they appear.
-
-    This class is designed to handle honey-prompt tokens with sensitivity levels,
-    variations, and context importance. It provides methods to match text against
-    defined tokens and evaluate the confidence of such matches. The primary usage
-    includes creating honey-prompts, validating their attributes, and performing
-    detections on given text based on configurable rules.
-
-    :ivar base_token: The primary token this honey-prompt is designed to detect.
-    :type base_token: str
-    :ivar category: Descriptive category or group this honey-prompt belongs to.
-    :type category: str
-    :ivar sensitivity: A value between 0.0 and 1.0 dictating the detection sensitivity.
-    :type sensitivity: float
-    :ivar context: An expected contextual reference for matches to improve accuracy.
-    :type context: str
-    :ivar variations: Alternative tokens or phrases that may match apart from the
-        base token.
-    :type variations: list of str
-    :ivar detection_rules: A dictionary defining detection rules such as match weights
-        and minimum confidence thresholds.
-    :type detection_rules: dict
-    :ivar created_at: Timestamp indicating when the honey-prompt was created.
-    :type created_at: datetime
-    """
     base_token: str
     category: str
     sensitivity: float
