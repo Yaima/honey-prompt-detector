@@ -3,7 +3,7 @@ import logging
 from typing import List
 from ..core.honey_prompt import HoneyPrompt
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("honey_prompt")
 
 class EnvironmentAgent:
     """

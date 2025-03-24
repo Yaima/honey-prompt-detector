@@ -7,7 +7,6 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 import argparse
 
-from src.honey_prompt_detector.utils.validation import InputValidator
 from src.honey_prompt_detector.agents.token_designer_agent import TokenDesignerAgent
 from src.honey_prompt_detector.agents.context_evaluator_agent import ContextEvaluatorAgent
 from src.honey_prompt_detector.core.orchestrator import Orchestrator
@@ -16,14 +15,17 @@ from src.honey_prompt_detector.monitoring.alerts import AlertManager
 from src.honey_prompt_detector.utils.logging import setup_logger
 from src.honey_prompt_detector.utils.config import Config
 
-config = Config()
-logger = setup_logger(
-    name=__name__,
-    log_file=config.log_file,
-    level=config.log_level,
-    retention_days=config.retention_days
-)
+logger = logging.getLogger("honey_prompt")
 
+def configure_logging():
+    config = Config()
+    root_logger = setup_logger(
+        name="honey_prompt",    # your chosen root logger name
+        log_file=config.log_file,
+        level=config.log_level, # or logging.DEBUG if you want debug logs
+        retention_days=config.retention_days
+    )
+    return root_logger
 
 from src.honey_prompt_detector.core.self_tuner import SelfTuner
 
@@ -220,4 +222,6 @@ def main():
     asyncio.run(run_async())
 
 if __name__ == "__main__":
+    logger = configure_logging()
+    logger.info("Initialized logging from main!")
     main()

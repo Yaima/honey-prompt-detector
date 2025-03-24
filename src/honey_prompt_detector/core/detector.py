@@ -4,7 +4,7 @@ from datetime import datetime
 from .honey_prompt import HoneyPrompt
 from ..utils.logging import setup_logger
 
-logger = setup_logger(__name__)
+logger = logging.getLogger("honey_prompt")
 
 
 class Detector:

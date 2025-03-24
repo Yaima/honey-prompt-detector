@@ -15,7 +15,7 @@ try:
 except ImportError:
     async_send = None  # Fallback: if not installed, email alerts may not work asynchronously
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("honey_prompt")
 
 
 class AlertManager:
