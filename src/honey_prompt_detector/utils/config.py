@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("honey_prompt")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 

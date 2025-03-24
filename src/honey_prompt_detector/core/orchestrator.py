@@ -10,7 +10,7 @@ from ..agents.context_evaluator_agent import ContextEvaluatorAgent
 from ..core.honey_prompt import HoneyPrompt
 from ..core.detector import Detector  # Import the Detector
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("honey_prompt")
 
 
 class Orchestrator:
