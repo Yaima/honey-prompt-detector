@@ -1,4 +1,5 @@
 # src/honey_prompt_detector/monitoring/metrics.py
+import asyncio
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import logging
@@ -6,24 +7,10 @@ from collections import defaultdict
 import json
 from pathlib import Path
 
+from src.honey_prompt_detector.utils.config import logger
+
 
 class MetricsCollector:
-    """
-    MetricsCollector is a utility class designed for collecting, managing, and analyzing various
-    metrics related to system performance, detection events, and health status. It provides
-    functionalities to track data such as detection patterns, system errors, and response times,
-    as well as saving and loading metrics from an external storage file.
-
-    This class is particularly useful for monitoring the effectiveness and reliability
-    of detection systems by providing insights into system performance and operational trends.
-
-    :ivar metrics_file: The optional path to a file for saving and loading metric data.
-    :type metrics_file: Path
-    :ivar metrics: A dictionary containing all collected metrics organized into
-        categories such as detections, performance, patterns, and system health.
-    :type metrics: Dict[str, Any]
-    """
-
     def __init__(self, metrics_file: Path = None):
         """
         Initialize the metrics collector.
@@ -186,6 +173,9 @@ class MetricsCollector:
     def save_metrics(self):
         """Save current metrics to file if configured."""
         if self.metrics_file:
+            # Ensure the parent directory exists
+            self.metrics_file.parent.mkdir(parents=True, exist_ok=True)
+
             with open(self.metrics_file, 'w') as f:
                 json.dump(self.metrics, f, indent=2)
 

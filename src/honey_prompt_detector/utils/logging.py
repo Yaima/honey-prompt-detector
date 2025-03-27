@@ -7,20 +7,8 @@ from typing import Optional
 
 
 class SecurityFormatter(logging.Formatter):
-    """
-    Custom logging formatter for enhanced log detail and tracking precision.
 
-    This class extends the functionality of the base logging formatter by adding
-    additional fields to log records, such as timestamps with microsecond precision,
-    process and thread IDs, and source code location details. These enhancements
-    are particularly useful for debugging and analyzing logs in applications
-    with concurrent operations.
-
-    :ivar default_msec_format: Default format for representing milliseconds in a log.
-    :type default_msec_format: str
-    """
-
-    def format(self, record):
+   def format(self, record):
         # Add timestamp with microsecond precision
         record.created_fmt = datetime.fromtimestamp(record.created).isoformat()
 
@@ -72,7 +60,6 @@ def setup_logger(
 
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
 
         # Set up log rotation
         from logging.handlers import TimedRotatingFileHandler
@@ -94,7 +81,7 @@ SECURITY_LOG_MESSAGES = {
     'token_detection': 'Detected honey-prompt token: {token_hash} (confidence: {confidence})',
     'attack_detected': 'ALERT: Potential prompt injection attack detected! Confidence: {confidence}',
     'false_positive': 'False positive detection recorded for token: {token_hash}',
-    'system_startup': 'Honey-prompt detection system initialized with {num_tokens} tokens',
+    'system_startup': 'Honey-Prompt detector initialized with {num_tokens} tokens',
     'api_error': 'API error during {operation}: {error}',
     'config_error': 'Configuration error: {error}',
 }

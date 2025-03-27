@@ -18,6 +18,7 @@ Thumbs.db
 detection_metrics.json
 alert_history.json
 experiment_results_*.json
+batch_experiment_metrics.json
 
 # IDE configs
 .idea/
@@ -33,3 +34,8 @@ build/
 
 # Ignore environment/secret files
 .env
+
+metrics/
+logs/
+
+models/
