@@ -16,7 +16,7 @@
 5. [Installation](#installation)
 6. [Testing](#testing)
 7. [Alerts & Monitoring](#alerts--monitoring)
-8. [Contributing](#contributing)
+8. [Community](#community)
 9. [License](#license)
 
 ---
@@ -401,9 +401,13 @@ python examples/slack_alert_example.py
 
 Email and Slack alerts are fully implemented and production-ready. Simply uncomment and configure the relevant environment variables in your `.env` file to enable them.
 
-## Contributing
+## Community
 
-We welcome contributions to improve the Honey-Prompt Detector! Whether it’s fixing a bug, adding new features, or improving documentation, your contributions are greatly appreciated. However, **please reach out to us first** before starting any major changes, so we can align on scope and avoid duplicate work.
+- [Contributing Guidelines](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security Policy](SECURITY.md)
+
+We welcome contributions to improve the Honey-Prompt Detector! Please read our [Contributing Guidelines](CONTRIBUTING.md) before starting any work.
 
 ---
 
