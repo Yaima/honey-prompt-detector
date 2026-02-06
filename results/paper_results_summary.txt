@@ -1,0 +1,32 @@
+Experimental Results Summary
+===========================
+
+Overall Performance Metrics:
+- Total test cases: 70
+- True positive rate (Recall): 100.00%
+- False positive rate: 0.00%
+- Average response time: 4494.79ms
+- Average confidence score: 0.67
+
+Performance by Attack Category:
+- Direct Injection:
+  * Detection rate: 100.0%
+  * Average response time: 4293.20ms
+  * Sample size: 10
+- Obfuscated Injection:
+  * Detection rate: 100.0%
+  * Average response time: 3985.77ms
+  * Sample size: 23
+- Context Manipulation:
+  * Detection rate: 100.0%
+  * Average response time: 3814.45ms
+  * Sample size: 13
+- Benign:
+  * Detection rate: 0.0%
+  * Average response time: 5435.13ms
+  * Sample size: 24
+
+Key Findings:
+- Honey-prompts effectively detect prompt injection attacks.
+- Low false-positive rate maintains system usability.
+- Resilient to obfuscation and context manipulation techniques.
