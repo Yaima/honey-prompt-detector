@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 from src.honey_prompt_detector.agents.context_evaluator_agent import ContextEvaluatorAgent
 from src.honey_prompt_detector.agents.token_designer_agent import TokenDesignerAgent
 from src.honey_prompt_detector.core.orchestrator import Orchestrator
-from src.honey_prompt_detector.core.self_tuner import SelfTuner
+from src.honey_prompt_detector.core.self_tuner import EnhancedSelfTuner
 from src.honey_prompt_detector.monitoring.alerts import AlertManager
 from src.honey_prompt_detector.monitoring.metrics import MetricsCollector
 from src.honey_prompt_detector.utils.config import Config
@@ -48,7 +48,7 @@ class HoneyPromptSystem:
         )
 
         # Self Tuner initialization
-        self.self_tuner = SelfTuner(detector_agent=self.orchestrator.detector, config=self.config)
+        self.self_tuner = EnhancedSelfTuner(detector_agent=self.orchestrator.detector, config=self.config)
 
         self.is_initialized = False
         self._metrics_task = None
@@ -103,7 +103,7 @@ class HoneyPromptSystem:
 
             if expected_detection is not None:
                 self.self_tuner.update_metrics(result, expected_detection)
-                new_threshold = self.self_tuner.adjust_threshold_if_needed()
+                new_threshold = self.self_tuner.adjust_threshold_pseudo_labels()
                 logger.info(f"Adjusted detection threshold: {new_threshold}")
 
             response_time = (datetime.now() - start_time).total_seconds()
@@ -119,6 +119,37 @@ class HoneyPromptSystem:
             response_time = (datetime.now() - start_time).total_seconds()
             self.metrics.record_performance(response_time, is_error=True)
             return {"detection": False, "error": str(e), "confidence": 0.0}
+
+    async def monitor_output(self, response: str, expected_detection: Optional[bool] = None) -> Dict[str, Any]:
+        """Monitor LLM output for honey token leaks."""
+        if not self.is_initialized:
+            raise RuntimeError("System not initialized. Call start() first.")
+
+        start_time = datetime.now()
+
+        try:
+            result = await self.orchestrator.monitor_output(response)
+
+            self.metrics.record_detection(result)
+
+            if expected_detection is not None:
+                self.self_tuner.update_metrics(result, expected_detection)
+                new_threshold = self.self_tuner.adjust_threshold_pseudo_labels()
+                logger.info(f"Adjusted detection threshold: {new_threshold}")
+
+            response_time = (datetime.now() - start_time).total_seconds()
+            self.metrics.record_performance(response_time)
+
+            if result["detection"]:
+                await self.alert_manager.send_alert(result)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error monitoring output: {str(e)}")
+            response_time = (datetime.now() - start_time).total_seconds()
+            self.metrics.record_performance(response_time, is_error=True)
+            return {"detection": False, "error": str(e), "confidence": 0.0, "source": "output"}
 
     async def get_system_status(self) -> Dict[str, Any]:
         """Return current system status and collected metrics."""

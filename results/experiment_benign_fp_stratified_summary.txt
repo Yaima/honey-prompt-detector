@@ -1,0 +1,18 @@
+Benign FP Stratified Corpus Study
+==================================================
+
+Tokens per category: 10
+Total samples: 420
+
+Overall Stage 3 FPR: 0.000000 (0/4200)
+Overall Stage 1 FPR: 0.0000 (0/420)
+
+Per-category:
+  english_prose         S3_FPR=0.000000  S1_FPR=0.0000  n=60
+  spanish               S3_FPR=0.000000  S1_FPR=0.0000  n=40
+  chinese               S3_FPR=0.000000  S1_FPR=0.0000  n=40
+  arabic                S3_FPR=0.000000  S1_FPR=0.0000  n=40
+  code_blocks           S3_FPR=0.000000  S1_FPR=0.0000  n=60
+  json_structured       S3_FPR=0.000000  S1_FPR=0.0000  n=60
+  log_lines             S3_FPR=0.000000  S1_FPR=0.0000  n=60
+  urls_web              S3_FPR=0.000000  S1_FPR=0.0000  n=60

@@ -1,0 +1,26 @@
+{
+  "episodes": [
+    {
+      "action": "design_token",
+      "context": "You are a helpful AI assistant.",
+      "patterns_known": 0,
+      "use_llm": false,
+      "timestamp": "2026-02-21T13:34:58.483350"
+    }
+  ],
+  "knowledge": {
+    "token_performance": {
+      "c314f7b52feb4633": {
+        "created_at": "2026-02-21T13:34:58.483445",
+        "base_token": "Gq3qoFWofImEtEXTPEv2lQ",
+        "detections": 4,
+        "false_positives": 0,
+        "total_uses": 4,
+        "success_rate": 1.0,
+        "fp_rate": 0.0,
+        "generation_method": "secure_random",
+        "last_used": "2026-02-21T13:37:42.038623"
+      }
+    }
+  }
+}

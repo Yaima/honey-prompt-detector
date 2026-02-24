@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional
 from openai import AsyncOpenAI
 from sentence_transformers import SentenceTransformer, util
 
+from ..core.events import FinalDetectionEvent, TokenNoMatchEvent
 from ..utils.canonicalization import canonicalize
 from .base_agent import AgentGoal, AgentMessage, BaseAgent
 from .decision_engine import DecisionEngine, Factor
@@ -65,12 +66,17 @@ class ContextEvaluatorAgent(BaseAgent):
         )
 
     def _setup_message_handlers(self) -> None:
-        """Setup message subscriptions"""
+        """Setup message subscriptions for autonomous event-driven operation."""
         # Listen for detection results to learn from
         self.message_bus.subscribe(self.name, "detection_result", self._handle_detection_result)
 
         # Listen for pattern sharing from other agents
         self.message_bus.subscribe(self.name, "share_pattern", self._handle_pattern_sharing)
+
+        # ── Event-Driven Pipeline: LLM semantic evaluator (Stage 4) ──
+        # Subscribe to TokenNoMatchEvent — when all earlier stages fail to match,
+        # the ContextEvaluatorAgent autonomously performs LLM-based semantic analysis.
+        self.message_bus.subscribe("*", "TokenNoMatchEvent", self._handle_pipeline_no_match)
 
     def _handle_detection_result(self, message: AgentMessage) -> None:
         """Handle detection results to learn from outcomes"""
@@ -129,6 +135,123 @@ class ContextEvaluatorAgent(BaseAgent):
         # Persist learning
         self.memory.learn_pattern("attack_patterns", self.attack_patterns)
         self.memory.learn_pattern("benign_patterns", self.benign_patterns)
+
+    def _handle_pipeline_no_match(self, message: AgentMessage) -> None:
+        """
+        Stage 4: Autonomous LLM-based semantic evaluation.
+
+        When all prior stages (heuristic, memory, honey-token) find no match,
+        the ContextEvaluatorAgent autonomously evaluates the text using GPT-4o-mini
+        to catch novel or sophisticated prompt-injection attempts.
+
+        Graceful degradation:
+          1. LLM analysis via GPT-4o-mini (primary)
+          2. Pattern matching against learned attack/benign DB (fallback)
+          3. Conservative "no detection" result (final fallback)
+        """
+        import asyncio
+        import time
+
+        payload = message.payload
+        text = payload.get("text", "")
+        request_id = payload.get("request_id", "")
+
+        t_start = time.perf_counter()
+
+        # Try to run the async evaluate_detection in a sync context
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        evaluation = None
+
+        if loop and loop.is_running():
+            # We're inside an event loop — schedule as a task
+            # The result will be emitted asynchronously
+            asyncio.ensure_future(
+                self._async_pipeline_evaluate(text, request_id, t_start)
+            )
+            return
+        else:
+            # No event loop running — run synchronously
+            try:
+                evaluation = asyncio.run(
+                    self.evaluate_detection(text=text, token="", surrounding_context=text, expected_context="")
+                )
+            except Exception as e:
+                logger.error(f"{self.name}: LLM evaluation failed: {e}")
+                evaluation = None
+
+        self._emit_final_detection(evaluation, text, request_id, t_start)
+
+    async def _async_pipeline_evaluate(
+        self, text: str, request_id: str, t_start: float
+    ) -> None:
+        """Async path for pipeline LLM evaluation."""
+        import time
+
+        try:
+            evaluation = await self.evaluate_detection(
+                text=text, token="", surrounding_context=text, expected_context=""
+            )
+        except Exception as e:
+            logger.error(f"{self.name}: Async LLM evaluation failed: {e}")
+            evaluation = None
+
+        self._emit_final_detection(evaluation, text, request_id, t_start)
+
+    def _emit_final_detection(
+        self, evaluation: dict, text: str, request_id: str, t_start: float
+    ) -> None:
+        """Emit a FinalDetectionEvent from LLM evaluation results."""
+        import time
+
+        elapsed_ms = (time.perf_counter() - t_start) * 1000
+
+        if evaluation and evaluation.get("detection_method") != "error":
+            is_attack = evaluation.get("is_attack", False)
+            confidence = evaluation.get("confidence", 0.0)
+            method = evaluation.get("detection_method", "llm_analysis")
+            explanation = evaluation.get("explanation", "")
+            risk_level = evaluation.get("risk_level", "low")
+        else:
+            # Graceful degradation: no LLM available or error
+            # Fall back to conservative "no detection"
+            is_attack = False
+            confidence = 0.0
+            method = "fallback_conservative"
+            explanation = "LLM evaluation unavailable; conservative no-detection"
+            risk_level = "low"
+
+        final = FinalDetectionEvent(
+            request_id=request_id,
+            source_agent=self.name,
+            detection=is_attack,
+            confidence=confidence,
+            method=method,
+            explanation=explanation,
+            risk_level=risk_level,
+            timing_ms=elapsed_ms,
+            stage_timings={"stage_4_llm_semantic_ms": elapsed_ms},
+            result=evaluation or {},
+        )
+        self.message_bus.publish_event(final)
+
+        logger.info(
+            f"{self.name}: Stage 4 LLM evaluation — "
+            f"{'ATTACK' if is_attack else 'benign'} "
+            f"(confidence={confidence:.2f}, method={method}, {elapsed_ms:.1f}ms)"
+        )
+
+        # Learn from high-confidence detections
+        if is_attack and confidence > 0.90:
+            import asyncio
+            try:
+                loop = asyncio.get_running_loop()
+                asyncio.ensure_future(self._learn_attack_pattern(text, confidence))
+            except RuntimeError:
+                pass  # No event loop; skip learning
 
     async def evaluate_detection(
         self, text: str, token: str = "", surrounding_context: str = "", expected_context: str = ""
@@ -380,12 +503,48 @@ class ContextEvaluatorAgent(BaseAgent):
 
     async def proactive_action(self) -> None:
         """
-        Autonomous proactive behavior:
-        - Analyze pattern effectiveness
-        - Share intelligence with other agents
-        - Identify emerging attack trends
+        Goal-driven autonomous behavior.
+
+        Decisions are driven by goal progress — if accuracy or FP rate goals
+        are not met, the agent autonomously adapts its confidence threshold
+        and shares intelligence to improve system-wide performance.
         """
-        # Share attack intelligence with other agents
+        # ── Goal-driven decision: adapt threshold based on goal progress ──
+        accuracy_goal = None
+        fp_goal = None
+        for g in self.goals:
+            if g.name == "accurate_detection":
+                accuracy_goal = g
+            elif g.name == "low_false_positive_rate":
+                fp_goal = g
+
+        # If accuracy goal is falling behind, lower threshold to catch more attacks
+        if accuracy_goal and not accuracy_goal.is_achieved():
+            accuracy_progress = accuracy_goal.progress()
+            if accuracy_progress < 0.80:  # Significantly behind
+                old = self.confidence_threshold
+                self.confidence_threshold = max(0.70, self.confidence_threshold - 0.02)
+                if self.confidence_threshold != old:
+                    logger.info(
+                        f"{self.name}: Goal-driven adaptation — accuracy at {accuracy_progress:.0%}, "
+                        f"lowering threshold {old:.2f} → {self.confidence_threshold:.2f}"
+                    )
+                    self.memory.learn_pattern("confidence_threshold", self.confidence_threshold)
+
+        # If FP goal is falling behind, raise threshold to reduce false positives
+        if fp_goal and not fp_goal.is_achieved():
+            fp_progress = fp_goal.progress()
+            if fp_progress < 0.80:  # Too many FPs
+                old = self.confidence_threshold
+                self.confidence_threshold = min(0.95, self.confidence_threshold + 0.02)
+                if self.confidence_threshold != old:
+                    logger.info(
+                        f"{self.name}: Goal-driven adaptation — FP goal at {fp_progress:.0%}, "
+                        f"raising threshold {old:.2f} → {self.confidence_threshold:.2f}"
+                    )
+                    self.memory.learn_pattern("confidence_threshold", self.confidence_threshold)
+
+        # ── Proactive intelligence sharing with peer agents ──
         if len(self.attack_patterns) > 0:
             recent_patterns = sorted(
                 self.attack_patterns.items(), key=lambda x: x[1].get("learned_at", ""), reverse=True
@@ -393,19 +552,19 @@ class ContextEvaluatorAgent(BaseAgent):
 
             for pattern_id, pattern_data in recent_patterns:
                 if pattern_data.get("source") == "self_learning":
-                    # Share with Environment agent
                     self.send_message(
                         recipient="Environment",
                         message_type="share_pattern",
                         payload={"type": "attack", "pattern": pattern_data["pattern"]},
                     )
 
-        # Check goal progress
+        # Log goal status
         active_goals = self.get_active_goals()
         if active_goals:
             logger.debug(
-                f"{self.name}: Active goals: {[g.name for g in active_goals]}, "
-                f"Patterns known: {len(self.attack_patterns)} attacks, {len(self.benign_patterns)} benign"
+                f"{self.name}: Goals: {[(g.name, f'{g.progress():.0%}') for g in self.goals]}, "
+                f"Threshold: {self.confidence_threshold:.2f}, "
+                f"Patterns: {len(self.attack_patterns)} attacks, {len(self.benign_patterns)} benign"
             )
 
     def _get_enhanced_system_prompt(self) -> str:

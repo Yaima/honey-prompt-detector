@@ -1,0 +1,68 @@
+{
+  "precision": 0.9892,
+  "recall": 0.5135,
+  "f1": 0.6761,
+  "accuracy": 0.8471,
+  "auc_roc": 0.9652,
+  "fpr": 0.0025,
+  "confusion_matrix": {
+    "tn": 7535,
+    "fp": 19,
+    "fn": 1656,
+    "tp": 1748
+  },
+  "bootstrap_ci_95": {
+    "precision": [
+      0.9836,
+      0.9938
+    ],
+    "recall": [
+      0.4959,
+      0.5326
+    ],
+    "f1": [
+      0.6601,
+      0.6919
+    ]
+  },
+  "per_source": {
+    "hf_deepset_prompt_injections": {
+      "n": 662,
+      "precision": 0.9839,
+      "recall": 0.2319,
+      "f1": 0.3754,
+      "auc_roc": 0.9373
+    },
+    "hf_safeguard_prompt_injection": {
+      "n": 10137,
+      "precision": 0.9892,
+      "recall": 0.5342,
+      "f1": 0.6937,
+      "auc_roc": 0.9728
+    },
+    "malicious_prompts.csv": {
+      "n": 69,
+      "precision": 1.0,
+      "recall": 0.6667,
+      "f1": 0.8,
+      "auc_roc": null
+    },
+    "prompts_conversation.csv": {
+      "n": 90,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "auc_roc": null
+    }
+  },
+  "latency": {
+    "mean_ms": 51.45,
+    "std_ms": 13.77,
+    "p95_ms": 70.55
+  },
+  "model": "meta-llama/Llama-Prompt-Guard-2-86M",
+  "model_key": "promptguard86m",
+  "display_name": "Llama Prompt Guard 2 86M",
+  "n_samples": 10958,
+  "device": "mps"
+}

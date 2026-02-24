@@ -1,0 +1,14 @@
+Operating-Point Threshold Sweep
+============================================================
+
+Dataset: 10958 samples
+Mean local latency: 39.58 ms
+Stage 4 mean latency: 1104 ms
+
+Config                            S4%  Lat(ms)      F1    Prec     Rec
+----------------------------------------------------------------------
+Default (paper)                 89.7%    1030   0.910   0.935   0.886
+High early-exit (fast)          86.7%     997   0.911   0.925   0.898
+Balanced                        86.9%     999   0.912   0.927   0.898
+Low early-exit (accurate)       90.6%    1040   0.907   0.937   0.880
+Local-only (no Stage 4)         86.7%     997   0.911   0.925   0.898

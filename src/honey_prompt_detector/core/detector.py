@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -61,6 +62,15 @@ class Detector:
         skip_heuristics: bool = False,
         skip_memory: bool = False,
     ) -> Dict[str, Any]:
+        # Initialize timing info
+        timing_info = {
+            "stage_1_heuristics_ms": 0.0,
+            "stage_2_attack_memory_ms": 0.0,
+            "stage_3_honey_token_ms": 0.0,
+            "total_ms": 0.0,
+        }
+        t_start = time.perf_counter()
+
         # Determine a local threshold based on the category
         if honey_prompt.category == "direct_injection":
             local_threshold = 0.70
@@ -76,7 +86,9 @@ class Detector:
         # Catches obvious prompt injection patterns quickly before deeper analysis
         # =========================================================================
         if not skip_heuristics:
+            t1 = time.perf_counter()
             heuristic_result = self._check_heuristics(text)
+            timing_info["stage_1_heuristics_ms"] = (time.perf_counter() - t1) * 1000
             if heuristic_result["matched"]:
                 self._record_detection(heuristic_result)
                 # Store in attack memory for future similarity matching
@@ -87,6 +99,8 @@ class Detector:
                         confidence=heuristic_result["confidence"],
                         metadata={"rule_id": heuristic_result.get("rule_id")},
                     )
+                heuristic_result["timing_info"] = timing_info
+                timing_info["total_ms"] = (time.perf_counter() - t_start) * 1000
                 return heuristic_result
 
         # =========================================================================
@@ -94,15 +108,20 @@ class Detector:
         # Recognizes variations of previously seen attacks via embedding similarity
         # =========================================================================
         if not skip_memory and self.attack_memory:
+            t2 = time.perf_counter()
             memory_result = self._check_attack_memory(text)
+            timing_info["stage_2_attack_memory_ms"] = (time.perf_counter() - t2) * 1000
             if memory_result["matched"] and memory_result["confidence"] >= local_threshold:
                 self._record_detection(memory_result)
+                memory_result["timing_info"] = timing_info
+                timing_info["total_ms"] = (time.perf_counter() - t_start) * 1000
                 return memory_result
 
         # =========================================================================
         # STAGE 3: Honey-prompt token detection
         # The core detection mechanism using canary tokens
         # =========================================================================
+        t3 = time.perf_counter()
 
         # Pre-canonicalize text for more robust matching
         # This defends against Unicode/homoglyph/encoding attacks
@@ -121,21 +140,32 @@ class Detector:
 
             if match_info["confidence"] >= local_threshold:
                 self._record_detection(match_info)
+                timing_info["stage_3_honey_token_ms"] = (time.perf_counter() - t3) * 1000
+                match_info["timing_info"] = timing_info
+                timing_info["total_ms"] = (time.perf_counter() - t_start) * 1000
                 return match_info
 
         # Check for variations
         variation_match = self._check_variations(text, honey_prompt, context_window_size)
         if variation_match["matched"] and variation_match["confidence"] >= local_threshold:
             self._record_detection(variation_match)
+            timing_info["stage_3_honey_token_ms"] = (time.perf_counter() - t3) * 1000
+            variation_match["timing_info"] = timing_info
+            timing_info["total_ms"] = (time.perf_counter() - t_start) * 1000
             return variation_match
 
         # Check for obfuscation attempts
         obfuscation_match = self._check_obfuscation(text, honey_prompt, context_window_size)
         if obfuscation_match["matched"] and obfuscation_match["confidence"] >= local_threshold:
             self._record_detection(obfuscation_match)
+            timing_info["stage_3_honey_token_ms"] = (time.perf_counter() - t3) * 1000
+            obfuscation_match["timing_info"] = timing_info
+            timing_info["total_ms"] = (time.perf_counter() - t_start) * 1000
             return obfuscation_match
 
-        return {"matched": False, "confidence": 0.0, "match_type": None}
+        timing_info["stage_3_honey_token_ms"] = (time.perf_counter() - t3) * 1000
+        timing_info["total_ms"] = (time.perf_counter() - t_start) * 1000
+        return {"matched": False, "confidence": 0.0, "match_type": None, "timing_info": timing_info}
 
     def _analyze_exact_match(self, text: str, honey_prompt: HoneyPrompt, context_window_size: int) -> Dict[str, Any]:
         start_index = text.find(honey_prompt.base_token)
@@ -256,6 +286,76 @@ class Detector:
                     "timestamp": datetime.now(),
                     "obfuscation_info": obfuscation_info,
                 }
+
+        # =====================================================================
+        # Additional obfuscation checks: reversed, spaced, hex-decoded tokens
+        # =====================================================================
+        token = honey_prompt.base_token
+
+        # Reversed token check
+        reversed_token = token[::-1]
+        if len(reversed_token) >= 8 and reversed_token in text:
+            start_index = text.find(reversed_token)
+            context_start = max(0, start_index - context_window_size)
+            context_end = min(len(text), start_index + len(reversed_token) + context_window_size)
+            logger.debug(f"Reversed token match found at index {start_index}")
+            return {
+                "matched": True,
+                "confidence": 0.85,
+                "match_type": "reversed",
+                "token": token,
+                "context": text[context_start:context_end],
+                "position": start_index,
+                "timestamp": datetime.now(),
+                "obfuscation_info": obfuscation_info,
+            }
+
+        # Spaced token check (characters separated by spaces/dots/dashes)
+        separators = [" ", ".", "-", ",", ";", "|", "/", "_"]
+        stripped_text = text
+        for sep in separators:
+            stripped_text = stripped_text.replace(sep, "")
+        stripped_token = token
+        for sep in separators:
+            stripped_token = stripped_token.replace(sep, "")
+        if len(stripped_token) >= 8 and stripped_token in stripped_text:
+            start_index = stripped_text.find(stripped_token)
+            logger.debug(f"Spaced/separated token match found")
+            return {
+                "matched": True,
+                "confidence": 0.85,
+                "match_type": "spaced",
+                "token": token,
+                "context": text[:min(len(text), context_window_size * 2)],
+                "position": start_index,
+                "timestamp": datetime.now(),
+                "obfuscation_info": obfuscation_info,
+            }
+
+        # Hex-encoded token check (try decoding hex strings in text)
+        try:
+            import re
+            hex_pattern = re.compile(r'[0-9a-fA-F]{20,}')
+            for hex_match in hex_pattern.finditer(text):
+                hex_str = hex_match.group()
+                try:
+                    decoded = bytes.fromhex(hex_str).decode('utf-8', errors='ignore')
+                    if token in decoded or token.lower() in decoded.lower():
+                        logger.debug(f"Hex-encoded token match found")
+                        return {
+                            "matched": True,
+                            "confidence": 0.85,
+                            "match_type": "hex_decoded",
+                            "token": token,
+                            "context": text[max(0, hex_match.start() - 50):hex_match.end() + 50],
+                            "position": hex_match.start(),
+                            "timestamp": datetime.now(),
+                            "obfuscation_info": obfuscation_info,
+                        }
+                except (ValueError, UnicodeDecodeError):
+                    continue
+        except Exception:
+            pass
 
         return {"matched": False, "confidence": 0.0}
 

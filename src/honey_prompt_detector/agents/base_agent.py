@@ -13,6 +13,7 @@ Provides core agent functionality:
 import asyncio
 import json
 import logging
+import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
@@ -148,13 +149,19 @@ class MessageBus:
             except Exception as e:
                 logger.error(f"Error delivering message to {message.recipient}: {e}")
 
-        # Also deliver to broadcast listeners
-        broadcast_key = f"*:{message.message_type}"
-        for callback in self.subscribers.get(broadcast_key, []):
-            try:
-                callback(message)
-            except Exception as e:
-                logger.error(f"Error broadcasting message: {e}")
+        # Also deliver to broadcast listeners (skip if recipient is already "*" to avoid double delivery)
+        if message.recipient != "*":
+            broadcast_key = f"*:{message.message_type}"
+            for callback in self.subscribers.get(broadcast_key, []):
+                try:
+                    callback(message)
+                except Exception as e:
+                    logger.error(f"Error broadcasting message: {e}")
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the singleton instance (for testing and re-initialization)."""
+        cls._instance = None
 
     def get_history(self, agent_name: Optional[str] = None, limit: int = 100) -> List[AgentMessage]:
         """Get message history for an agent"""
@@ -162,6 +169,35 @@ class MessageBus:
             relevant = [m for m in self.message_history if m.sender == agent_name or m.recipient == agent_name]
             return relevant[-limit:]
         return self.message_history[-limit:]
+
+    def publish_event(self, event, recipient: str = "*") -> None:
+        """Publish a typed event as an AgentMessage (broadcast by default)."""
+        message = AgentMessage(
+            sender=event.source_agent,
+            recipient=recipient,
+            message_type=event.__class__.__name__,
+            payload=event.to_dict(),
+            timestamp=event.timestamp,
+        )
+        self.publish(message)
+
+    async def await_event(
+        self, message_type: str, request_id: str, timeout: float = 5.0
+    ) -> Optional[AgentMessage]:
+        """Wait for a specific event matching request_id (polling with timeout)."""
+        deadline = time.monotonic() + timeout
+        seen = len(self.message_history)  # start scanning from current position
+        while time.monotonic() < deadline:
+            # Scan new messages since last check
+            for msg in self.message_history[seen:]:
+                if (
+                    msg.message_type == message_type
+                    and msg.payload.get("request_id") == request_id
+                ):
+                    return msg
+            seen = len(self.message_history)
+            await asyncio.sleep(0.02)  # 20ms polling interval
+        return None  # timeout
 
 
 class BaseAgent(ABC):

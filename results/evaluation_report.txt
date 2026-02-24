@@ -1,0 +1,354 @@
+================================================================================
+COMPREHENSIVE EVALUATION REPORT: HIVE PROMPT INJECTION DETECTOR
+================================================================================
+
+DATASET INFORMATION
+--------------------------------------------------------------------------------
+Dataset:           data/unified_dataset.csv
+Total Samples:     10,958
+Benign Samples:    7,554 (68.9%)
+Attack Samples:    3,404 (31.1%)
+Random Seed:       42
+Evaluation Date:   2025-02-21
+
+================================================================================
+DETECTOR: HeuristicRulesEngine
+================================================================================
+
+CONFUSION MATRIX (at threshold=0.5)
+--------------------------------------------------------------------------------
+True Positives:    1,014
+False Positives:   199
+True Negatives:    7,355
+False Negatives:   2,390
+
+CLASSIFICATION METRICS (at threshold=0.5)
+--------------------------------------------------------------------------------
+Precision:         0.835944
+Recall:            0.297885
+F1 Score:          0.439246
+Accuracy:          0.763734
+False Positive Rate: 0.026344
+False Negative Rate: 0.702115
+Specificity:       0.973656
+
+ROC/PR CURVE ANALYSIS
+--------------------------------------------------------------------------------
+AUC-ROC:           0.635790
+AUC-PR:            0.634494
+
+BOOTSTRAP CONFIDENCE INTERVALS (95%, 500 iterations)
+--------------------------------------------------------------------------------
+Precision:
+  Point Estimate:  0.835944
+  95% CI:          [0.816176, 0.856312]
+Recall:
+  Point Estimate:  0.297885
+  95% CI:          [0.281765, 0.313059]
+F1 Score:
+  Point Estimate:  0.439246
+  95% CI:          [0.422927, 0.455653]
+
+LOW-FPR OPERATING POINTS
+--------------------------------------------------------------------------------
+0.1%_fpr:
+  Threshold:       1.000000
+  TPR (Recall):    0.037603
+  Precision:       1.000000
+0.5%_fpr:
+  Threshold:       1.000000
+  TPR (Recall):    0.037603
+  Precision:       1.000000
+1.0%_fpr:
+  Threshold:       1.000000
+  TPR (Recall):    0.037603
+  Precision:       1.000000
+5.0%_fpr:
+  Threshold:       0.600000
+  TPR (Recall):    0.296710
+  Precision:       0.835401
+10.0%_fpr:
+  Threshold:       0.600000
+  TPR (Recall):    0.296710
+  Precision:       0.835401
+
+PER-SOURCE BREAKDOWN
+--------------------------------------------------------------------------------
+
+hf_deepset_prompt_injections:
+  Samples:         662
+  Attacks:         263
+  Precision:       0.947368
+  Recall:          0.136882
+  F1 Score:        0.239203
+  Accuracy:        0.654079
+  AUC-ROC:         0.566097
+
+hf_safeguard_prompt_injection:
+  Samples:         10,137
+  Attacks:         3,072
+  Precision:       0.828371
+  Recall:          0.307943
+  F1 Score:        0.448980
+  Accuracy:        0.770938
+  AUC-ROC:         0.640076
+
+malicious_prompts.csv:
+  Samples:         69
+  Attacks:         69
+  Precision:       1.000000
+  Recall:          0.463768
+  F1 Score:        0.633663
+  Accuracy:        0.463768
+  AUC-ROC:         0.000000
+
+prompts_conversation.csv:
+  Samples:         90
+  Attacks:         0
+  Precision:       0.000000
+  Recall:          0.000000
+  F1 Score:        0.000000
+  Accuracy:        0.988889
+  AUC-ROC:         0.000000
+
+================================================================================
+DETECTOR: KeywordBaseline
+================================================================================
+
+CONFUSION MATRIX (at threshold=0.5)
+--------------------------------------------------------------------------------
+True Positives:    413
+False Positives:   3
+True Negatives:    7,551
+False Negatives:   2,991
+
+CLASSIFICATION METRICS (at threshold=0.5)
+--------------------------------------------------------------------------------
+Precision:         0.992788
+Recall:            0.121328
+F1 Score:          0.216230
+Accuracy:          0.726775
+False Positive Rate: 0.000397
+False Negative Rate: 0.878672
+Specificity:       0.999603
+
+ROC/PR CURVE ANALYSIS
+--------------------------------------------------------------------------------
+AUC-ROC:           0.688448
+AUC-PR:            0.680578
+
+BOOTSTRAP CONFIDENCE INTERVALS (95%, 500 iterations)
+--------------------------------------------------------------------------------
+Precision:
+  Point Estimate:  0.992788
+  95% CI:          [0.983827, 1.000000]
+Recall:
+  Point Estimate:  0.121328
+  95% CI:          [0.111205, 0.133469]
+F1 Score:
+  Point Estimate:  0.216230
+  95% CI:          [0.199633, 0.234248]
+
+LOW-FPR OPERATING POINTS
+--------------------------------------------------------------------------------
+0.1%_fpr:
+  Threshold:       0.600000
+  TPR (Recall):    0.121328
+  Precision:       0.992788
+0.5%_fpr:
+  Threshold:       0.600000
+  TPR (Recall):    0.121328
+  Precision:       0.992788
+1.0%_fpr:
+  Threshold:       0.400000
+  TPR (Recall):    0.228848
+  Precision:       0.938554
+5.0%_fpr:
+  Threshold:       0.400000
+  TPR (Recall):    0.228848
+  Precision:       0.938554
+10.0%_fpr:
+  Threshold:       0.200000
+  TPR (Recall):    0.423325
+  Precision:       0.768533
+
+PER-SOURCE BREAKDOWN
+--------------------------------------------------------------------------------
+
+hf_deepset_prompt_injections:
+  Samples:         662
+  Attacks:         263
+  Precision:       1.000000
+  Recall:          0.022814
+  F1 Score:        0.044610
+  Accuracy:        0.611782
+  AUC-ROC:         0.633637
+
+hf_safeguard_prompt_injection:
+  Samples:         10,137
+  Attacks:         3,072
+  Precision:       0.992386
+  Recall:          0.127279
+  F1 Score:        0.225620
+  Accuracy:        0.735227
+  AUC-ROC:         0.689064
+
+malicious_prompts.csv:
+  Samples:         69
+  Attacks:         69
+  Precision:       1.000000
+  Recall:          0.231884
+  F1 Score:        0.376471
+  Accuracy:        0.231884
+  AUC-ROC:         0.000000
+
+prompts_conversation.csv:
+  Samples:         90
+  Attacks:         0
+  Precision:       0.000000
+  Recall:          0.000000
+  F1 Score:        0.000000
+  Accuracy:        1.000000
+  AUC-ROC:         0.000000
+
+================================================================================
+DETECTOR: HeuristicBaseline
+================================================================================
+
+CONFUSION MATRIX (at threshold=0.5)
+--------------------------------------------------------------------------------
+True Positives:    1,007
+False Positives:   197
+True Negatives:    7,357
+False Negatives:   2,397
+
+CLASSIFICATION METRICS (at threshold=0.5)
+--------------------------------------------------------------------------------
+Precision:         0.836379
+Recall:            0.295828
+F1 Score:          0.437066
+Accuracy:          0.763278
+False Positive Rate: 0.026079
+False Negative Rate: 0.704172
+Specificity:       0.973921
+
+ROC/PR CURVE ANALYSIS
+--------------------------------------------------------------------------------
+AUC-ROC:           0.634882
+AUC-PR:            0.634107
+
+BOOTSTRAP CONFIDENCE INTERVALS (95%, 500 iterations)
+--------------------------------------------------------------------------------
+Precision:
+  Point Estimate:  0.836379
+  95% CI:          [0.812344, 0.855903]
+Recall:
+  Point Estimate:  0.295828
+  95% CI:          [0.280368, 0.311217]
+F1 Score:
+  Point Estimate:  0.437066
+  95% CI:          [0.418031, 0.453373]
+
+LOW-FPR OPERATING POINTS
+--------------------------------------------------------------------------------
+0.1%_fpr:
+  Threshold:       1.000000
+  TPR (Recall):    0.037603
+  Precision:       1.000000
+0.5%_fpr:
+  Threshold:       1.000000
+  TPR (Recall):    0.037603
+  Precision:       1.000000
+1.0%_fpr:
+  Threshold:       1.000000
+  TPR (Recall):    0.037603
+  Precision:       1.000000
+5.0%_fpr:
+  Threshold:       0.700000
+  TPR (Recall):    0.295828
+  Precision:       0.836379
+10.0%_fpr:
+  Threshold:       0.700000
+  TPR (Recall):    0.295828
+  Precision:       0.836379
+
+PER-SOURCE BREAKDOWN
+--------------------------------------------------------------------------------
+
+hf_deepset_prompt_injections:
+  Samples:         662
+  Attacks:         263
+  Precision:       0.945946
+  Recall:          0.133080
+  F1 Score:        0.233333
+  Accuracy:        0.652568
+  AUC-ROC:         0.564205
+
+hf_safeguard_prompt_injection:
+  Samples:         10,137
+  Attacks:         3,072
+  Precision:       0.829225
+  Recall:          0.306641
+  F1 Score:        0.447719
+  Accuracy:        0.770741
+  AUC-ROC:         0.639541
+
+malicious_prompts.csv:
+  Samples:         69
+  Attacks:         69
+  Precision:       1.000000
+  Recall:          0.434783
+  F1 Score:        0.606061
+  Accuracy:        0.434783
+  AUC-ROC:         0.000000
+
+prompts_conversation.csv:
+  Samples:         90
+  Attacks:         0
+  Precision:       0.000000
+  Recall:          0.000000
+  F1 Score:        0.000000
+  Accuracy:        0.988889
+  AUC-ROC:         0.000000
+
+================================================================================
+COMPARATIVE SUMMARY
+================================================================================
+
+DETECTOR PERFORMANCE AT THRESHOLD 0.5
+--------------------------------------------------------------------------------
+Detector                       Precision    Recall       F1           AUC-ROC     
+--------------------------------------------------------------------------------
+HeuristicRulesEngine           0.8359       0.2979       0.4392       0.6358      
+KeywordBaseline                0.9928       0.1213       0.2162       0.6884      
+HeuristicBaseline              0.8364       0.2958       0.4371       0.6349      
+
+================================================================================
+KEY OBSERVATIONS
+================================================================================
+
+1. OVERALL PERFORMANCE
+   - HeuristicRulesEngine achieved the highest F1 score
+   - Best F1: 0.4392
+
+2. PRECISION vs RECALL TRADE-OFF
+   - HeuristicRulesEngine: Precision=0.8359, Recall=0.2979
+   - KeywordBaseline: Precision=0.9928, Recall=0.1213
+   - KeywordBaseline has higher precision but much lower recall
+   - HeuristicRulesEngine balances both metrics better
+
+3. ROC CURVES (AUC)
+   - HeuristicRulesEngine: 0.6358
+   - KeywordBaseline: 0.6884
+   - HeuristicBaseline: 0.6349
+
+4. CONFIDENCE INTERVALS
+   - All detectors show stable performance across bootstrap resampling
+   - Confidence intervals indicate reliable estimates with large dataset
+
+5. LOW-FPR OPERATING POINTS
+   - At 1% FPR operating point:
+     - HeuristicRulesEngine: TPR=0.0376
+     - KeywordBaseline: TPR=0.2288
+
+================================================================================

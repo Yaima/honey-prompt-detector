@@ -1,0 +1,65 @@
+{
+  "precision": 0.9492,
+  "recall": 0.8942,
+  "f1": 0.9209,
+  "accuracy": 0.9523,
+  "auc_roc": 0.9794,
+  "confusion_matrix": {
+    "tn": 7391,
+    "fp": 163,
+    "fn": 360,
+    "tp": 3044
+  },
+  "bootstrap_ci_95": {
+    "precision": [
+      0.9419,
+      0.9561
+    ],
+    "recall": [
+      0.8831,
+      0.9043
+    ],
+    "f1": [
+      0.914,
+      0.9274
+    ]
+  },
+  "per_source": {
+    "hf_deepset_prompt_injections": {
+      "n": 662,
+      "precision": 0.9919,
+      "recall": 0.9278,
+      "f1": 0.9587,
+      "auc_roc": 0.9843
+    },
+    "hf_safeguard_prompt_injection": {
+      "n": 10137,
+      "precision": 0.9448,
+      "recall": 0.8913,
+      "f1": 0.9173,
+      "auc_roc": 0.9792
+    },
+    "malicious_prompts.csv": {
+      "n": 69,
+      "precision": 1.0,
+      "recall": 0.8986,
+      "f1": 0.9466,
+      "auc_roc": null
+    },
+    "prompts_conversation.csv": {
+      "n": 90,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "auc_roc": null
+    }
+  },
+  "latency": {
+    "mean_ms": 117.27,
+    "std_ms": 36.04,
+    "p95_ms": 150.68
+  },
+  "model": "qualifire/prompt-injection-sentinel",
+  "n_samples": 10958,
+  "device": "mps"
+}

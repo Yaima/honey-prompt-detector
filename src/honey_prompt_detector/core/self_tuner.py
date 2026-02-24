@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from src.honey_prompt_detector.core.detector import Detector
+from .detector import Detector
 
 logger = logging.getLogger("honey_prompt")
 
@@ -293,6 +293,7 @@ class EnhancedSelfTuner:
         Update with human-provided label.
 
         This is the gold standard for calibration.
+        Uses Thompson Sampling to adjust threshold based on accumulated human feedback.
 
         Args:
             text_hash: Hash of the text that was labeled
@@ -320,6 +321,10 @@ class EnhancedSelfTuner:
 
                 # Remove from pending review
                 self.pending_human_review = [r for r in self.pending_human_review if r.text_hash != text_hash]
+
+                # Apply Thompson Sampling if we have enough human feedback
+                if self.human_labeled_count >= 5 and self.human_labeled_count % 5 == 0:
+                    self.adjust_threshold_thompson_sampling()
 
                 logger.info(
                     f"Human label received: {human_label}, "

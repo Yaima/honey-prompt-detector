@@ -1,0 +1,178 @@
+{
+  "baselines": {
+    "HIVE Full Pipeline (1+2+3+4)": {
+      "precision": 0.8409,
+      "recall": 0.3602,
+      "f1": 0.5043,
+      "accuracy": 0.7801,
+      "auc_roc": 0.6645,
+      "tp": 1226,
+      "tn": 7322,
+      "fp": 232,
+      "fn": 2178,
+      "fpr": 0.0307
+    },
+    "HIVE Local Only (1+2+3)": {
+      "precision": 0.8359,
+      "recall": 0.2979,
+      "f1": 0.4392,
+      "accuracy": 0.7637,
+      "auc_roc": 0.6358,
+      "tp": 1014,
+      "tn": 7355,
+      "fp": 199,
+      "fn": 2390,
+      "fpr": 0.0263
+    },
+    "HIVE Stage 4 Alone": {
+      "precision": 0.9927,
+      "recall": 0.8375,
+      "f1": 0.9085,
+      "accuracy": 0.9476,
+      "auc_roc": 0.2963,
+      "tp": 2851,
+      "tn": 7533,
+      "fp": 21,
+      "fn": 553,
+      "fpr": 0.0028
+    },
+    "Sentinel": {
+      "precision": 0.9492,
+      "recall": 0.8942,
+      "f1": 0.9209,
+      "accuracy": 0.9523,
+      "auc_roc": 0.9794,
+      "tp": 3044,
+      "tn": 7391,
+      "fp": 163,
+      "fn": 360,
+      "fpr": 0.0216
+    },
+    "ProtectAI": {
+      "precision": 0.9938,
+      "recall": 0.797,
+      "f1": 0.8846,
+      "accuracy": 0.9354,
+      "auc_roc": 0.9667,
+      "tp": 2713,
+      "tn": 7537,
+      "fp": 17,
+      "fn": 691,
+      "fpr": 0.0023
+    }
+  },
+  "strategies": {
+    "1. OR (HIVE-full | Sentinel)": {
+      "precision": 0.8881,
+      "recall": 0.9069,
+      "f1": 0.8974,
+      "accuracy": 0.9356,
+      "auc_roc": 0.9775,
+      "tp": 3087,
+      "tn": 7165,
+      "fp": 389,
+      "fn": 317,
+      "fpr": 0.0515
+    },
+    "2. AND (HIVE-full & Sentinel)": {
+      "precision": 0.995,
+      "recall": 0.3475,
+      "f1": 0.5151,
+      "accuracy": 0.7968,
+      "auc_roc": 0.6773,
+      "tp": 1183,
+      "tn": 7548,
+      "fp": 6,
+      "fn": 2221,
+      "fpr": 0.0008
+    },
+    "3. HIVE-local | Sentinel (replace Stage4)": {
+      "precision": 0.8952,
+      "recall": 0.8963,
+      "f1": 0.8958,
+      "accuracy": 0.9352,
+      "auc_roc": 0.9766,
+      "tp": 3051,
+      "tn": 7197,
+      "fp": 357,
+      "fn": 353,
+      "fpr": 0.0473
+    },
+    "4. HIVE-local & Sentinel (high-precision)": {
+      "precision": 0.9951,
+      "recall": 0.2958,
+      "f1": 0.4561,
+      "accuracy": 0.7808,
+      "tp": 1007,
+      "tn": 7549,
+      "fp": 5,
+      "fn": 2397,
+      "fpr": 0.0007
+    },
+    "5. Majority vote (local + Sentinel + S4)": {
+      "precision": 0.995,
+      "recall": 0.8214,
+      "f1": 0.8999,
+      "accuracy": 0.9432,
+      "auc_roc": 0.9271,
+      "tp": 2796,
+      "tn": 7540,
+      "fp": 14,
+      "fn": 608,
+      "fpr": 0.0019
+    },
+    "6. Sentinel | HIVE-local": {
+      "precision": 0.8952,
+      "recall": 0.8963,
+      "f1": 0.8958,
+      "accuracy": 0.9352,
+      "tp": 3051,
+      "tn": 7197,
+      "fp": 357,
+      "fn": 353,
+      "fpr": 0.0473
+    },
+    "7. Avg confidence, \u03c4=0.48": {
+      "precision": 0.9591,
+      "recall": 0.8678,
+      "f1": 0.9112,
+      "accuracy": 0.9474,
+      "auc_roc": 0.9785,
+      "tp": 2954,
+      "tn": 7428,
+      "fp": 126,
+      "fn": 450,
+      "fpr": 0.0167
+    },
+    "8. Weighted (0.6*Sentinel + 0.4*HIVE), \u03c4=0.39": {
+      "precision": 0.9513,
+      "recall": 0.8954,
+      "f1": 0.9225,
+      "accuracy": 0.9533,
+      "auc_roc": 0.9795,
+      "tp": 3048,
+      "tn": 7398,
+      "fp": 156,
+      "fn": 356,
+      "fpr": 0.0207
+    },
+    "9. Triple majority (Sentinel+ProtectAI+HIVE)": {
+      "precision": 0.9966,
+      "recall": 0.7676,
+      "f1": 0.8672,
+      "accuracy": 0.927,
+      "auc_roc": 0.9934,
+      "tp": 2613,
+      "tn": 7545,
+      "fp": 9,
+      "fn": 791,
+      "fpr": 0.0012
+    }
+  },
+  "disagreement": {
+    "both_correct": 8348,
+    "hive_only_correct": 200,
+    "sentinel_only_correct": 2087,
+    "both_wrong": 323
+  }
+}
