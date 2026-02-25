@@ -1,0 +1,46 @@
+{
+  "simulation_config": {
+    "num_rounds": 1500,
+    "normal_attack_ratio": 0.3,
+    "shift_attack_ratio": 0.7,
+    "shift_start_round": 750,
+    "seed": 42,
+    "adversarial_perturbation_ratio": 0.1
+  },
+  "convergence_metrics": {
+    "rounds_to_convergence": 151,
+    "final_threshold": 0.76,
+    "threshold_std_dev": 0.1086478789484636,
+    "threshold_mean": 0.7312799999999999
+  },
+  "distribution_shift_metrics": {
+    "shift_round": 750,
+    "recovery_time": 64,
+    "pre_shift_threshold": 0.7587999999999999,
+    "post_shift_threshold": 0.8068000000000004
+  },
+  "stability_metrics": {
+    "threshold_variance": 0.0118043616,
+    "threshold_range": 0.4,
+    "threshold_changes_per_100_rounds": 1.8
+  },
+  "oscillation_metrics": {
+    "oscillation_count": 26,
+    "oscillation_frequency": 0.0,
+    "arm_switches": 26
+  },
+  "final_tuner_state": {
+    "current_threshold": 0.76,
+    "total_evaluations": 1500,
+    "pseudo_labeled_count": 43,
+    "human_labeled_count": 3,
+    "estimated_precision": 0.6666666666666666,
+    "estimated_recall": 1.0,
+    "arm_successes": 1,
+    "arm_failures": 0
+  },
+  "pseudo_label_accuracy": {
+    "mean_accuracy": 0.7314493183165383,
+    "samples": 1205
+  }
+}

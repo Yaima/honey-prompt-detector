@@ -1,0 +1,99 @@
+{
+  "plain": {
+    "tpr": 1.0,
+    "tp": 100,
+    "fn": 0,
+    "total": 100,
+    "avg_latency_ms": 0.099
+  },
+  "base64": {
+    "tpr": 1.0,
+    "tp": 100,
+    "fn": 0,
+    "total": 100,
+    "avg_latency_ms": 0.059
+  },
+  "url_encoded": {
+    "tpr": 1.0,
+    "tp": 100,
+    "fn": 0,
+    "total": 100,
+    "avg_latency_ms": 0.038
+  },
+  "html_entities": {
+    "tpr": 1.0,
+    "tp": 100,
+    "fn": 0,
+    "total": 100,
+    "avg_latency_ms": 0.101
+  },
+  "rot13": {
+    "tpr": 0.0,
+    "tp": 0,
+    "fn": 100,
+    "total": 100,
+    "avg_latency_ms": 0.124
+  },
+  "homoglyph": {
+    "tpr": 0.42,
+    "tp": 42,
+    "fn": 58,
+    "total": 100,
+    "avg_latency_ms": 0.154
+  },
+  "zero_width": {
+    "tpr": 1.0,
+    "tp": 100,
+    "fn": 0,
+    "total": 100,
+    "avg_latency_ms": 0.042
+  },
+  "base64+url": {
+    "tpr": 1.0,
+    "tp": 100,
+    "fn": 0,
+    "total": 100,
+    "avg_latency_ms": 0.059
+  },
+  "in_sentence": {
+    "tpr": 1.0,
+    "tp": 100,
+    "fn": 0,
+    "total": 100,
+    "avg_latency_ms": 0.055
+  },
+  "split_halves": {
+    "tpr": 0.0,
+    "tp": 0,
+    "fn": 100,
+    "total": 100,
+    "avg_latency_ms": 0.135
+  },
+  "case_swap": {
+    "tpr": 1.0,
+    "tp": 100,
+    "fn": 0,
+    "total": 100,
+    "avg_latency_ms": 0.123
+  },
+  "hex_encoded": {
+    "tpr": 0.0,
+    "tp": 0,
+    "fn": 100,
+    "total": 100,
+    "avg_latency_ms": 0.15
+  },
+  "_benign_fpr": {
+    "fpr": 0.0,
+    "fp": 0,
+    "tn": 2000,
+    "total": 2000
+  },
+  "_overall": {
+    "tpr": 0.7017,
+    "fpr": 0.0,
+    "n_tokens": 100,
+    "n_obfuscations": 12,
+    "n_benign": 2000
+  }
+}

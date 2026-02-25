@@ -75,6 +75,9 @@ class Config:
 
         self.tuning_batch_size = 10
 
+        # Event-driven pipeline mode (True = autonomous agents, False = synchronous fallback)
+        self.use_event_driven = os.getenv("USE_EVENT_DRIVEN", "true").lower() == "true"
+
         logger.info("Configuration loaded successfully")
 
     def _validate_environment(self) -> None:

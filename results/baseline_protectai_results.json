@@ -1,0 +1,68 @@
+{
+  "precision": 0.9938,
+  "recall": 0.797,
+  "f1": 0.8846,
+  "accuracy": 0.9354,
+  "auc_roc": 0.9667,
+  "fpr": 0.0023,
+  "confusion_matrix": {
+    "tn": 7537,
+    "fp": 17,
+    "fn": 691,
+    "tp": 2713
+  },
+  "bootstrap_ci_95": {
+    "precision": [
+      0.9907,
+      0.9967
+    ],
+    "recall": [
+      0.783,
+      0.8112
+    ],
+    "f1": [
+      0.876,
+      0.8932
+    ]
+  },
+  "per_source": {
+    "hf_deepset_prompt_injections": {
+      "n": 662,
+      "precision": 0.9646,
+      "recall": 0.4144,
+      "f1": 0.5798,
+      "auc_roc": 0.8258
+    },
+    "hf_safeguard_prompt_injection": {
+      "n": 10137,
+      "precision": 0.995,
+      "recall": 0.8346,
+      "f1": 0.9078,
+      "auc_roc": 0.9809
+    },
+    "malicious_prompts.csv": {
+      "n": 69,
+      "precision": 1.0,
+      "recall": 0.5797,
+      "f1": 0.7339,
+      "auc_roc": null
+    },
+    "prompts_conversation.csv": {
+      "n": 90,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "auc_roc": null
+    }
+  },
+  "latency": {
+    "mean_ms": 83.14,
+    "std_ms": 27.24,
+    "p95_ms": 100.67
+  },
+  "model": "protectai/deberta-v3-base-prompt-injection-v2",
+  "model_key": "protectai",
+  "display_name": "ProtectAI DeBERTa-v3",
+  "n_samples": 10958,
+  "device": "mps"
+}

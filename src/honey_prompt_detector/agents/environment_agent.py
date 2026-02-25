@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 
 from sentence_transformers import SentenceTransformer, util
 
+from ..core.events import StrategyChangedEvent
 from ..core.honey_prompt import HoneyPrompt
 from .base_agent import AgentGoal, AgentMessage, BaseAgent
 
@@ -238,57 +239,110 @@ class EnvironmentAgent(BaseAgent):
                     best_strategy = strategy
 
         if best_strategy != self.current_strategy:
+            old_strategy = self.current_strategy
             logger.info(
-                f"{self.name}: Switching strategy from '{self.current_strategy}' to '{best_strategy}' "
+                f"{self.name}: Autonomously switching strategy from '{old_strategy}' to '{best_strategy}' "
                 f"(success rate: {best_rate:.2%})"
             )
             self.current_strategy = best_strategy
             self.memory.learn_pattern("current_strategy", self.current_strategy)
 
+            # Emit typed event to notify other agents of strategy change
+            strategy_event = StrategyChangedEvent(
+                source_agent=self.name,
+                old_strategy=old_strategy,
+                new_strategy=best_strategy,
+                reason=f"Performance-based: {best_rate:.2%} success rate",
+            )
+            self.message_bus.publish_event(strategy_event)
+
     async def proactive_action(self) -> None:
         """
-        Autonomous proactive behavior:
-        - Monitor embedding strategy performance
-        - Adapt indirect detection threshold
-        - Share insights with other agents
-        """
-        # Analyze strategy performance
-        total_uses = sum(s["uses"] for s in self.embedding_strategies.values())
-        if total_uses > 0:
-            logger.debug(f"{self.name}: Embedding strategies performance:")
-            for strategy, metrics in self.embedding_strategies.items():
-                if metrics["uses"] > 0:
-                    logger.debug(
-                        f"  {strategy}: {metrics['success_rate']:.2%} " f"({metrics['detections']}/{metrics['uses']})"
-                    )
+        Goal-driven autonomous behavior.
 
-        # Adapt indirect detection threshold based on performance
+        The EnvironmentAgent monitors its indirect detection goal and
+        autonomously adapts embedding strategy and threshold. If the goal
+        is not being met, it more aggressively adjusts thresholds and
+        triggers strategy re-evaluation.
+        """
+        # ── Goal-driven threshold adaptation ──
+        indirect_goal = None
+        for g in self.goals:
+            if g.name == "high_indirect_detection":
+                indirect_goal = g
+                break
+
+        goal_progress = indirect_goal.progress() if indirect_goal else 1.0
+
         detection_stats = self.get_metric_stats("indirect_detections")
         if detection_stats["count"] > 50:
             recent_mean = detection_stats.get("recent_mean", 0)
-
             old_threshold = self.indirect_threshold
 
-            # If detecting too many (possible false positives), increase threshold
-            if recent_mean > 0.20:  # More than 20% detection rate might be too sensitive
-                self.indirect_threshold = min(0.95, self.indirect_threshold + 0.01)
-            # If detecting too few (possible misses), decrease threshold
+            # Goal-driven: adapt more aggressively when behind
+            step = 0.02 if goal_progress < 0.70 else 0.01
+
+            if recent_mean > 0.20:
+                self.indirect_threshold = min(0.95, self.indirect_threshold + step)
             elif recent_mean < 0.05:
-                self.indirect_threshold = max(0.80, self.indirect_threshold - 0.01)
+                self.indirect_threshold = max(0.80, self.indirect_threshold - step)
 
             if self.indirect_threshold != old_threshold:
                 logger.info(
-                    f"{self.name}: Adapted indirect threshold {old_threshold:.2f} → {self.indirect_threshold:.2f}"
+                    f"{self.name}: Goal-driven threshold adaptation "
+                    f"(goal at {goal_progress:.0%}) — "
+                    f"{old_threshold:.2f} → {self.indirect_threshold:.2f}"
                 )
                 self.memory.learn_pattern("indirect_threshold", self.indirect_threshold)
 
-        # Check goal progress
-        active_goals = self.get_active_goals()
-        if active_goals:
+        # ── Goal-driven strategy re-evaluation ──
+        # If goal is significantly behind, force strategy evaluation even with less data
+        min_uses = 10 if goal_progress >= 0.80 else 5
+        if goal_progress < 0.80:
+            await self._adapt_strategy_with_min_uses(min_uses)
+
+        # Log strategy performance and goal status
+        total_uses = sum(s["uses"] for s in self.embedding_strategies.values())
+        if total_uses > 0:
             logger.debug(
-                f"{self.name}: Active goals: {[g.name for g in active_goals]}, "
-                f"Current strategy: {self.current_strategy}, Threshold: {self.indirect_threshold:.2f}"
+                f"{self.name}: Goal: {goal_progress:.0%}, Strategy: {self.current_strategy}, "
+                f"Threshold: {self.indirect_threshold:.2f}, "
             )
+            # Log strategy details
+            strat_info = []
+            for k, v in self.embedding_strategies.items():
+                if v["uses"] > 0:
+                    strat_info.append(f"{k}={v['success_rate']:.0%}")
+            strategies_str = ", ".join(strat_info)
+            logger.debug(f"Strategies: {strategies_str}")
+
+    async def _adapt_strategy_with_min_uses(self, min_uses: int = 10) -> None:
+        """Adapt embedding strategy, with configurable minimum data requirement."""
+        best_strategy = self.current_strategy
+        best_rate = 0.0
+
+        for strategy, metrics in self.embedding_strategies.items():
+            if metrics["uses"] >= min_uses:
+                if metrics["success_rate"] > best_rate:
+                    best_rate = metrics["success_rate"]
+                    best_strategy = strategy
+
+        if best_strategy != self.current_strategy:
+            old_strategy = self.current_strategy
+            logger.info(
+                f"{self.name}: Autonomously switching strategy from '{old_strategy}' to '{best_strategy}' "
+                f"(success rate: {best_rate:.2%})"
+            )
+            self.current_strategy = best_strategy
+            self.memory.learn_pattern("current_strategy", self.current_strategy)
+
+            strategy_event = StrategyChangedEvent(
+                source_agent=self.name,
+                old_strategy=old_strategy,
+                new_strategy=best_strategy,
+                reason=f"Performance-based: {best_rate:.2%} success rate",
+            )
+            self.message_bus.publish_event(strategy_event)
 
     def get_strategy_report(self) -> Dict[str, Any]:
         """Generate report on embedding strategies"""

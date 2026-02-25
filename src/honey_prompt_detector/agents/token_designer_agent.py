@@ -13,12 +13,14 @@ Exhibits true agent characteristics:
 import asyncio
 import json
 import logging
+import secrets
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from openai import AsyncOpenAI
 
+from ..core.events import TokenRotationRequestEvent
 from ..core.honey_prompt import HoneyPrompt
 from .base_agent import AgentGoal, AgentMessage, BaseAgent
 
@@ -57,6 +59,14 @@ class TokenDesignerAgent(BaseAgent):
                 name="low_false_positive_rate", priority=0.9, target_metric="false_positive_rate", target_value=0.05
             )
         )
+
+    def generate_secure_token(self) -> str:
+        """Generate a cryptographically secure random token.
+
+        Uses Python's secrets module for production-grade unpredictability
+        with 128 bits of entropy, as specified in Section 3.7 of the paper.
+        """
+        return secrets.token_urlsafe(16)
 
     def _setup_message_handlers(self) -> None:
         """Setup message subscriptions"""
@@ -110,18 +120,63 @@ class TokenDesignerAgent(BaseAgent):
                 recipient=message.sender, message_type="new_token_response", payload={"token": new_token.__dict__}
             )
 
-    async def design_token(self, system_context: str, max_retries: int = 3) -> Optional[HoneyPrompt]:
+    async def design_token(self, system_context: str, use_llm: bool = False, max_retries: int = 3) -> Optional[HoneyPrompt]:
         """
         Design a honey-prompt token using learned patterns.
 
-        Now includes learning from past successes and failures.
+        Args:
+            system_context: The context in which the token will be used.
+            use_llm: If False (default), use cryptographically secure token generation.
+                    If True, use LLM-based token design for enhanced sophistication.
+            max_retries: Number of retries for LLM-based generation.
+
+        Returns:
+            HoneyPrompt instance with the generated token and variations.
         """
         # Remember this design attempt
         self.memory.remember_episode(
-            {"action": "design_token", "context": system_context, "patterns_known": len(self.successful_patterns)}
+            {"action": "design_token", "context": system_context, "patterns_known": len(self.successful_patterns), "use_llm": use_llm}
         )
 
-        # Use learned patterns to improve prompt
+        # If use_llm is False, generate token securely without LLM
+        if not use_llm:
+            base_token = self.generate_secure_token()
+            additional_variations = [" ".join(base_token), ".".join(base_token), base_token.upper(), base_token.lower()]
+
+            honey_prompt = HoneyPrompt(
+                base_token=base_token,
+                variations=additional_variations,
+                detection_rules={
+                    "exact_match_weight": 1.0,
+                    "variation_match_weight": 0.8,
+                    "context_importance": 0.7,
+                    "minimum_confidence": 0.6,
+                },
+                category="direct_injection",
+                sensitivity=0.9,
+                context=system_context,
+            )
+
+            # Track this token's performance
+            self.token_performance[honey_prompt.token_hash] = {
+                "created_at": datetime.now().isoformat(),
+                "base_token": honey_prompt.base_token,
+                "detections": 0,
+                "false_positives": 0,
+                "total_uses": 0,
+                "success_rate": 0.0,
+                "fp_rate": 0.0,
+                "generation_method": "secure_random",
+            }
+
+            # Save to memory
+            self.memory.learn_pattern("token_performance", self.token_performance)
+
+            logger.info(f"{self.name}: Created new secure token {honey_prompt.token_hash[:8]}")
+
+            return honey_prompt
+
+        # Use learned patterns to improve prompt with LLM-based approach
         retry_count = 0
         while retry_count < max_retries:
             try:
@@ -161,6 +216,7 @@ class TokenDesignerAgent(BaseAgent):
                     "total_uses": 0,
                     "success_rate": 0.0,
                     "fp_rate": 0.0,
+                    "generation_method": "llm_based",
                 }
 
                 # Save to memory
@@ -205,49 +261,81 @@ class TokenDesignerAgent(BaseAgent):
 
     async def proactive_action(self) -> None:
         """
-        Autonomous proactive behavior:
-        - Check token performance
-        - Suggest token rotations if needed
-        - Prune underperforming tokens
+        Goal-driven autonomous behavior.
+
+        The TokenDesigner monitors its own goal progress (detection rate,
+        FP rate) and autonomously decides whether tokens need rotation.
+        Goals drive urgency: falling behind on detection rate triggers
+        more aggressive rotation; falling behind on FP rate triggers
+        conservative token redesign.
         """
-        # Analyze current token performance
         now = datetime.now()
+
+        # ── Goal-driven urgency calculation ──
+        detection_goal = None
+        fp_goal = None
+        for g in self.goals:
+            if g.name == "high_detection_rate":
+                detection_goal = g
+            elif g.name == "low_false_positive_rate":
+                fp_goal = g
+
+        # Determine rotation aggressiveness based on goal progress
+        detection_progress = detection_goal.progress() if detection_goal else 1.0
+        fp_progress = fp_goal.progress() if fp_goal else 1.0
+
+        # If detection rate goal is far from target, rotate more aggressively
+        age_threshold = 30  # days
+        success_threshold = 0.80
+        if detection_progress < 0.70:
+            age_threshold = 14  # Rotate sooner when underperforming
+            success_threshold = 0.90  # Demand higher success
+            logger.info(
+                f"{self.name}: Goal-driven urgency — detection goal at {detection_progress:.0%}, "
+                f"tightening rotation criteria (age<{age_threshold}d, success>{success_threshold:.0%})"
+            )
 
         for token_hash, perf in list(self.token_performance.items()):
             if perf["total_uses"] < 10:
-                continue  # Not enough data yet
+                continue
 
-            # Check if token needs rotation (old or underperforming)
             created_at = datetime.fromisoformat(perf["created_at"])
             age_days = (now - created_at).days
 
             should_rotate = False
             reason = ""
 
-            if age_days > 30:
+            if age_days > age_threshold:
                 should_rotate = True
-                reason = f"age ({age_days} days)"
-            elif perf["success_rate"] < 0.80 and perf["total_uses"] > 50:
+                reason = f"age ({age_days} days, goal-driven limit: {age_threshold})"
+            elif perf["success_rate"] < success_threshold and perf["total_uses"] > 50:
                 should_rotate = True
-                reason = f"low success rate ({perf['success_rate']:.2%})"
+                reason = f"low success rate ({perf['success_rate']:.2%}, goal requires >{success_threshold:.0%})"
             elif perf["fp_rate"] > 0.10:
                 should_rotate = True
-                reason = f"high false positive rate ({perf['fp_rate']:.2%})"
+                reason = f"high FP rate ({perf['fp_rate']:.2%})"
 
             if should_rotate:
-                logger.info(f"{self.name}: Suggesting token rotation for {token_hash[:8]} due to {reason}")
+                logger.info(f"{self.name}: Autonomously requesting token rotation for {token_hash[:8]} — {reason}")
 
-                # Notify other agents
+                rotation_event = TokenRotationRequestEvent(
+                    source_agent=self.name,
+                    reason=f"Token {token_hash[:8]}: {reason}",
+                    new_token={"token_hash": token_hash, "performance": perf},
+                )
+                self.message_bus.publish_event(rotation_event)
+
                 self.send_message(
                     recipient="Orchestrator",
                     message_type="token_rotation_suggested",
                     payload={"token_hash": token_hash, "reason": reason, "performance": perf},
                 )
 
-        # Check goal progress
-        active_goals = self.get_active_goals()
-        if active_goals:
-            logger.debug(f"{self.name}: Active goals: {[g.name for g in active_goals]}")
+        # Log goal status
+        logger.debug(
+            f"{self.name}: Goals: {[(g.name, f'{g.progress():.0%}') for g in self.goals]}, "
+            f"Tokens tracked: {len(self.token_performance)}"
+        )
 
     def _get_system_prompt(self) -> str:
         """Enhanced system prompt with learning"""
@@ -313,7 +401,7 @@ class TokenDesignerAgent(BaseAgent):
     def _default_honey_prompt(self, system_context: str) -> HoneyPrompt:
         """Fallback honey prompt"""
         logger.info("Returning default honey prompt due to failures.")
-        return HoneyPrompt(
+        honey_prompt = HoneyPrompt(
             base_token="default_honey_token",
             variations=["default_honey_token"],
             detection_rules={
@@ -326,6 +414,19 @@ class TokenDesignerAgent(BaseAgent):
             sensitivity=0.9,
             context=system_context,
         )
+        # Track default token's performance
+        self.token_performance[honey_prompt.token_hash] = {
+            "created_at": datetime.now().isoformat(),
+            "base_token": honey_prompt.base_token,
+            "detections": 0,
+            "false_positives": 0,
+            "total_uses": 0,
+            "success_rate": 0.0,
+            "fp_rate": 0.0,
+            "generation_method": "fallback_default",
+        }
+        self.memory.learn_pattern("token_performance", self.token_performance)
+        return honey_prompt
 
     def get_performance_report(self) -> Dict[str, Any]:
         """Generate a performance report for all tokens"""

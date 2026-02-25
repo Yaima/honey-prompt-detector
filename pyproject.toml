@@ -127,10 +127,10 @@ Repository = "https://github.com/Yaima/honey-prompt-detector"
 Issues = "https://github.com/Yaima/honey-prompt-detector/issues"
 
 [project.scripts]
-honey-prompt = "src.honey_prompt_detector.main:main"
+honey-prompt = "honey_prompt_detector.main:main"
 
-[tool.setuptools]
-packages = ["src.honey_prompt_detector"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.package-data]
 honey_prompt_detector = ["py.typed"]

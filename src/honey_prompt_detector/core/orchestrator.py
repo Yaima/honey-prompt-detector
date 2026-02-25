@@ -1,14 +1,24 @@
+import asyncio
 import base64
 import binascii
 import logging
+import uuid
 from typing import Any, Dict, List
 
-from src.honey_prompt_detector.core.self_tuner import SelfTuner
+from src.honey_prompt_detector.core.self_tuner import EnhancedSelfTuner
 
+from ..agents.base_agent import MessageBus
 from ..agents.context_evaluator_agent import ContextEvaluatorAgent
 from ..agents.environment_agent import EnvironmentAgent
 from ..agents.token_designer_agent import TokenDesignerAgent
-from ..core.detector import Detector  # Import the Detector
+from ..core.analysis_pipeline import (
+    AttackMemoryService,
+    HeuristicAnalysisService,
+    HoneyTokenService,
+)
+from ..core.attack_memory import AttackMemory
+from ..core.detector import Detector
+from ..core.events import FinalDetectionEvent, TextReceivedEvent, TokenRotationRequestEvent
 from ..core.honey_prompt import HoneyPrompt
 
 logger = logging.getLogger("honey_prompt")
@@ -36,10 +46,41 @@ class Orchestrator:
         self.context_evaluator = context_evaluator
         self.config = config
         self.honey_prompts: List[HoneyPrompt] = []
-        self.detector = Detector(context_evaluator=self.context_evaluator)
         self.environment_agent = EnvironmentAgent(similarity_model_name=self.config.similarity_model_name)
-        self.self_tuner = SelfTuner(detector_agent=self.detector, config=config)
+
+        # Initialize AttackMemory with the embedding model from environment_agent
+        attack_memory = AttackMemory(
+            embedding_model=self.environment_agent.similarity_model,
+            similarity_threshold=0.85,
+            max_records=10000,
+            persistence_path=None,  # Disabled persistence for now - can add to config later
+        )
+
+        self.detector = Detector(
+            context_evaluator=self.context_evaluator,
+            attack_memory=attack_memory,
+        )
+        self.self_tuner = EnhancedSelfTuner(detector_agent=self.detector, config=config)
         self.current_threshold = config.initial_threshold
+
+        # ── Event-Driven Pipeline Setup ──────────────────────────────
+        # Shared message bus (singleton) for inter-agent communication
+        self.message_bus = MessageBus()
+
+        # Initialize autonomous analysis pipeline services
+        # Each subscribes to events and processes detection stages independently
+        self.heuristic_service = HeuristicAnalysisService(self.detector, self.message_bus)
+        self.memory_service = AttackMemoryService(self.detector, self.message_bus)
+        self.token_service = HoneyTokenService(self.detector, self.message_bus)
+
+        # ContextEvaluatorAgent already subscribes to TokenNoMatchEvent
+        # via _setup_message_handlers() → _handle_pipeline_no_match()
+
+        # Subscribe to token rotation requests from TokenDesignerAgent
+        self.message_bus.subscribe("*", "TokenRotationRequestEvent", self._handle_token_rotation)
+
+        # Event-driven mode flag (True = event pipeline, False = synchronous fallback)
+        self.use_event_driven = getattr(config, "use_event_driven", True)
 
     async def initialize_system(self) -> None:
         """Set up initial honey-prompts for detection."""
@@ -57,7 +98,12 @@ class Orchestrator:
     async def monitor_text(self, text: str) -> Dict[str, Any]:
         """
         Monitor text for potential prompt injection attacks.
-        Decodes Base64 input if detected before analysis.
+
+        Uses the event-driven autonomous agent pipeline:
+          1. Emit TextReceivedEvent on the MessageBus
+          2. Agents independently process stages (heuristic → memory → token → LLM)
+          3. Await FinalDetectionEvent with timeout
+          4. Fallback to synchronous detector if event pipeline times out
         """
         original_text = text
         text = self._decode_base64_if_needed(text)
@@ -65,7 +111,55 @@ class Orchestrator:
         if original_text != text:
             logger.info("Base64 input detected and decoded.")
 
-        # Leverage detector logic comprehensively
+        if self.use_event_driven:
+            return await self._monitor_text_event_driven(text, original_text)
+        else:
+            return await self._monitor_text_synchronous(text, original_text)
+
+    async def _monitor_text_event_driven(self, text: str, original_text: str) -> Dict[str, Any]:
+        """Event-driven pipeline: agents autonomously process detection stages."""
+        request_id = str(uuid.uuid4())
+
+        # Emit TextReceivedEvent — agents subscribe and react independently
+        event = TextReceivedEvent(
+            request_id=request_id,
+            source_agent="Orchestrator",
+            text=text,
+            honey_prompts=self.honey_prompts,
+            context_window_size=self.config.context_window_size,
+            source="input",
+        )
+        self.message_bus.publish_event(event)
+
+        # Await FinalDetectionEvent from whichever agent resolves first
+        final_msg = await self.message_bus.await_event(
+            "FinalDetectionEvent", request_id, timeout=5.0
+        )
+
+        if final_msg:
+            payload = final_msg.payload
+            result = {
+                "detection": payload.get("detection", False),
+                "confidence": payload.get("confidence", 0.0),
+                "explanation": payload.get("explanation", ""),
+                "risk_level": payload.get("risk_level", "low"),
+                "was_base64_encoded": original_text != text,
+                "match_type": payload.get("method", "event_pipeline"),
+                "context": text,
+                "stage_timings": payload.get("stage_timings", {}),
+                "source_agent": payload.get("source_agent", ""),
+            }
+
+            # Notify agents for learning
+            self._notify_agents_of_detection(result, None, text)
+            return result
+
+        # Timeout — fall back to synchronous path
+        logger.warning("Event pipeline timed out — falling back to synchronous detection")
+        return await self._monitor_text_synchronous(text, original_text)
+
+    async def _monitor_text_synchronous(self, text: str, original_text: str) -> Dict[str, Any]:
+        """Synchronous fallback: direct detector + context evaluator calls."""
         for honey_prompt in self.honey_prompts:
             detection_result = self.detector.analyze_text(text, honey_prompt, self.config.context_window_size)
             if detection_result["matched"]:
@@ -83,16 +177,13 @@ class Orchestrator:
                         "risk_level": evaluation.get("risk_level", "high"),
                         "token_hash": honey_prompt.token_hash,
                         "was_base64_encoded": original_text != text,
-                        "match_type": "honey_prompt_match",  # explicitly set
-                        "context": detection_result.get("context", text),  # provide fallback if no context
+                        "match_type": "honey_prompt_match",
+                        "context": detection_result.get("context", text),
                     }
-
-                    # Notify agents for learning (enables autonomous intelligence)
                     self._notify_agents_of_detection(result, honey_prompt, text)
-
                     return result
 
-        # Fallback scenario:
+        # Fallback scenario
         evaluation = await self.context_evaluator.evaluate_detection(
             text=text, token="(no_token)", surrounding_context=text, expected_context=""
         )
@@ -102,12 +193,60 @@ class Orchestrator:
             "explanation": evaluation.get("explanation", ""),
             "risk_level": evaluation.get("risk_level", "low"),
             "was_base64_encoded": original_text != text,
-            "match_type": "contextual_evaluation",  # explicitly set
+            "match_type": "contextual_evaluation",
             "context": text,
         }
-
-        # Notify agents even for non-token detections
         self._notify_agents_of_detection(result, None, text)
+        return result
+
+    async def monitor_output(self, response: str) -> Dict[str, Any]:
+        """
+        Monitor LLM output for potential honey token leaks.
+        Decodes Base64 input if detected before analysis.
+        Uses Stage 3 (semantic analysis) only for output detection.
+        """
+        original_response = response
+        response = self._decode_base64_if_needed(response)
+
+        if original_response != response:
+            logger.info("Base64 input detected in output and decoded.")
+
+        # Iterate over honey prompts and check for leaks in output
+        for honey_prompt in self.honey_prompts:
+            detection_result = self.detector.analyze_text(
+                response,
+                honey_prompt,
+                self.config.context_window_size,
+                skip_heuristics=True,
+                skip_memory=True,
+            )
+            if detection_result["matched"]:
+                logger.warning("ALERT: Honey token leaked in model output!")
+                result = {
+                    "detection": True,
+                    "confidence": detection_result.get("confidence", 0.85),
+                    "explanation": "Honey token detected in LLM output - potential information leak",
+                    "risk_level": "high",
+                    "token_hash": honey_prompt.token_hash,
+                    "source": "output",
+                    "match_type": "output_token_leak",
+                    "was_base64_encoded": original_response != response,
+                    "context": detection_result.get("context", response),
+                }
+
+                # Notify agents of output leak detection
+                self._notify_agents_of_detection(result, honey_prompt, response)
+
+                return result
+
+        # No token leak detected in output
+        result = {
+            "detection": False,
+            "confidence": 0.0,
+            "source": "output",
+            "match_type": "no_leak",
+            "was_base64_encoded": original_response != response,
+        }
 
         return result
 
@@ -159,7 +298,7 @@ class Orchestrator:
             self.self_tuner.update_metrics(result, expected)
 
         # Adjust threshold based on accumulated metrics
-        self.current_threshold = self.self_tuner.adjust_threshold_if_needed()
+        self.current_threshold = self.self_tuner.adjust_threshold_pseudo_labels()
         logger.info(f"Adjusted threshold to {self.current_threshold}")
 
         return results
@@ -171,6 +310,23 @@ class Orchestrator:
         context_start = max(0, start_idx - window_size)
         context_end = min(len(text), start_idx + len(token) + window_size)
         return text[context_start:context_end]
+
+    def _handle_token_rotation(self, message) -> None:
+        """
+        Handle autonomous token rotation requests from TokenDesignerAgent.
+
+        When the TokenDesignerAgent detects degraded token performance (age,
+        low success rate, high FP rate), it emits a TokenRotationRequestEvent.
+        The Orchestrator coordinates the actual swap.
+        """
+        payload = message.payload
+        reason = payload.get("reason", "unknown")
+        new_token_data = payload.get("new_token", {})
+
+        logger.info(f"Orchestrator: Token rotation requested — reason: {reason}")
+
+        # The actual rotation is initiated by the proactive_action loop in TokenDesigner
+        # Here we just log and could trigger a re-initialization if needed
 
     def _notify_agents_of_detection(self, result: Dict[str, Any], honey_prompt: Any, text: str) -> None:
         """

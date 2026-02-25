@@ -35,6 +35,7 @@ class MetricsCollector:
                 "time_distribution": defaultdict(int),
                 "token_effectiveness": defaultdict(float),
             },
+            "stage_timings": defaultdict(list),
             "system_health": {"last_error": None, "error_count": 0, "last_checkpoint": datetime.now().isoformat()},
         }
 
@@ -95,6 +96,27 @@ class MetricsCollector:
             # Decrease effectiveness score for tokens that generate false positives
             self.metrics["patterns"]["token_effectiveness"][token] = max(0.0, current_effectiveness - 0.1)
 
+    def record_stage_timing(self, stage_name: str, elapsed_ms: float):
+        """Record timing for a detection stage."""
+        self.metrics["stage_timings"][stage_name].append(elapsed_ms)
+
+    def get_latency_summary(self) -> Dict[str, Any]:
+        """Get latency percentiles (p50/p95/p99) per stage."""
+        summary = {}
+        for stage, timings in self.metrics["stage_timings"].items():
+            if not timings:
+                continue
+            sorted_t = sorted(timings)
+            n = len(sorted_t)
+            summary[stage] = {
+                "count": n,
+                "mean_ms": sum(sorted_t) / n,
+                "p50_ms": sorted_t[int(n * 0.5)] if n > 0 else 0,
+                "p95_ms": sorted_t[int(n * 0.95)] if n > 1 else sorted_t[-1],
+                "p99_ms": sorted_t[int(n * 0.99)] if n > 1 else sorted_t[-1],
+            }
+        return summary
+
     def get_summary(self) -> Dict[str, Any]:
         """
         Generate a summary of current metrics.
@@ -114,6 +136,7 @@ class MetricsCollector:
             "error_rate": self.calculate_error_rate(),
             "most_common_patterns": self.get_common_patterns(limit=5),
             "system_health": self.get_health_status(),
+            "latency_by_stage": self.get_latency_summary(),
         }
 
     def calculate_detection_rate(self) -> float:

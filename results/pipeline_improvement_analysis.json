@@ -1,0 +1,9 @@
+{
+  "analysis_date": "2026-02-22T18:41:37.769176",
+  "samples": 10958,
+  "targets": {
+    "sentinel_f1": 0.9209,
+    "protectai_f1": 0.8846,
+    "current_hive_f1": 0.889
+  }
+}
