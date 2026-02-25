@@ -55,3 +55,15 @@ models/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Overleaf
+overleaf_upload/
+
+# Tasks
+tasks/
+
+# Logs
+logs/
+
+# Claude
+.claude/
