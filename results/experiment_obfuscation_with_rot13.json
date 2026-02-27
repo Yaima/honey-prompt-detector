@@ -1,0 +1,92 @@
+{
+  "total_types": 13,
+  "tokens_per_type": 10,
+  "total_leaks": 130,
+  "total_detected": 110,
+  "overall_tpr": 0.846,
+  "fpr": 0.0,
+  "per_type": {
+    "base64": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    },
+    "case_swapped": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    },
+    "hex_encoded": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    },
+    "html_entities": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    },
+    "in_json": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    },
+    "in_paragraph": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    },
+    "partial_8char": {
+      "tpr": 0.0,
+      "detected": 0,
+      "total": 10
+    },
+    "plain": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    },
+    "reversed": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    },
+    "rot13": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    },
+    "spaced": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    },
+    "split_halves": {
+      "tpr": 0.0,
+      "detected": 0,
+      "total": 10
+    },
+    "url_encoded": {
+      "tpr": 1.0,
+      "detected": 10,
+      "total": 10
+    }
+  },
+  "types_at_100pct": [
+    "base64",
+    "case_swapped",
+    "hex_encoded",
+    "html_entities",
+    "in_json",
+    "in_paragraph",
+    "plain",
+    "reversed",
+    "rot13",
+    "spaced",
+    "url_encoded"
+  ],
+  "types_missed": [
+    "partial_8char",
+    "split_halves"
+  ]
+}

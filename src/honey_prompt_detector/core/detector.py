@@ -1,3 +1,4 @@
+import codecs
 import logging
 import time
 from datetime import datetime
@@ -188,7 +189,13 @@ class Detector:
         }
 
     def _check_variations(self, text: str, honey_prompt: HoneyPrompt, context_window_size: int) -> Dict[str, Any]:
-        for variation in honey_prompt.variations:
+        # Add ROT13 variant of the base token to the check set
+        all_variations = list(honey_prompt.variations)
+        rot13_variant = codecs.encode(honey_prompt.base_token, 'rot13')
+        if rot13_variant not in all_variations:
+            all_variations.append(rot13_variant)
+
+        for variation in all_variations:
             if variation in text:
                 start_index = text.find(variation)
                 context_start = max(0, start_index - context_window_size)
@@ -225,8 +232,12 @@ class Detector:
         canonical_text = self.canonicalizer.canonicalize(text, aggressive=True)
         canonical_token = self.canonicalizer.canonicalize(honey_prompt.base_token, aggressive=True)
 
-        # Also check variations with canonicalization
-        canonical_variations = [self.canonicalizer.canonicalize(v, aggressive=True) for v in honey_prompt.variations]
+        # Add ROT13 variant for canonical checking
+        all_variations_for_canon = list(honey_prompt.variations)
+        rot13_variant = codecs.encode(honey_prompt.base_token, 'rot13')
+        if rot13_variant not in all_variations_for_canon:
+            all_variations_for_canon.append(rot13_variant)
+        canonical_variations = [self.canonicalizer.canonicalize(v, aggressive=True) for v in all_variations_for_canon]
 
         # Check for match in canonicalized text
         if canonical_token in canonical_text:
@@ -274,12 +285,12 @@ class Detector:
                 context_end = min(len(text), start_index + len(canonical_var) + context_window_size)
                 surrounding_context = text[context_start:context_end]
 
-                logger.debug(f"Obfuscated variation match '{honey_prompt.variations[i]}' found")
+                logger.debug(f"Obfuscated variation match '{all_variations_for_canon[i]}' found")
                 return {
                     "matched": True,
                     "confidence": 0.80,
                     "match_type": "obfuscated_variation",
-                    "token": honey_prompt.variations[i],
+                    "token": all_variations_for_canon[i],
                     "original_token": honey_prompt.base_token,
                     "context": surrounding_context,
                     "position": start_index,

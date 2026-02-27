@@ -1,0 +1,200 @@
+{
+  "part_a_compositions": {
+    "base64_of_reversed": {
+      "detected": 0,
+      "total": 10,
+      "tpr": 0.0
+    },
+    "hex_of_spaced": {
+      "detected": 0,
+      "total": 10,
+      "tpr": 0.0
+    },
+    "rot13_then_reversed": {
+      "detected": 0,
+      "total": 10,
+      "tpr": 0.0
+    },
+    "url_of_base64": {
+      "detected": 10,
+      "total": 10,
+      "tpr": 1.0
+    }
+  },
+  "part_b_rebuff_comparison": {
+    "plain": {
+      "hive_detected": 10,
+      "rebuff_detected": 10,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 1.0,
+      "delta": 0.0
+    },
+    "base64": {
+      "hive_detected": 10,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 0.0,
+      "delta": 1.0
+    },
+    "reversed": {
+      "hive_detected": 10,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 0.0,
+      "delta": 1.0
+    },
+    "spaced": {
+      "hive_detected": 10,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 0.0,
+      "delta": 1.0
+    },
+    "hex_encoded": {
+      "hive_detected": 10,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 0.0,
+      "delta": 1.0
+    },
+    "url_encoded": {
+      "hive_detected": 10,
+      "rebuff_detected": 10,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 1.0,
+      "delta": 0.0
+    },
+    "html_entities": {
+      "hive_detected": 10,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 0.0,
+      "delta": 1.0
+    },
+    "case_swapped": {
+      "hive_detected": 10,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 0.0,
+      "delta": 1.0
+    },
+    "in_json": {
+      "hive_detected": 10,
+      "rebuff_detected": 10,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 1.0,
+      "delta": 0.0
+    },
+    "partial_8char": {
+      "hive_detected": 0,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 0.0,
+      "rebuff_tpr": 0.0,
+      "delta": 0.0
+    },
+    "split_halves": {
+      "hive_detected": 0,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 0.0,
+      "rebuff_tpr": 0.0,
+      "delta": 0.0
+    },
+    "in_paragraph": {
+      "hive_detected": 10,
+      "rebuff_detected": 10,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 1.0,
+      "delta": 0.0
+    },
+    "rot13": {
+      "hive_detected": 10,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 0.0,
+      "delta": 1.0
+    },
+    "base64_of_reversed": {
+      "hive_detected": 0,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 0.0,
+      "rebuff_tpr": 0.0,
+      "delta": 0.0
+    },
+    "hex_of_spaced": {
+      "hive_detected": 0,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 0.0,
+      "rebuff_tpr": 0.0,
+      "delta": 0.0
+    },
+    "rot13_then_reversed": {
+      "hive_detected": 0,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 0.0,
+      "rebuff_tpr": 0.0,
+      "delta": 0.0
+    },
+    "url_of_base64": {
+      "hive_detected": 10,
+      "rebuff_detected": 0,
+      "total": 10,
+      "hive_tpr": 1.0,
+      "rebuff_tpr": 0.0,
+      "delta": 1.0
+    }
+  },
+  "part_c_fp_audit": {
+    "total_benign": 500,
+    "total_fp": 0,
+    "fpr": 0.0,
+    "tokens_tested": 5,
+    "by_category": {
+      "multilingual": {
+        "fp": 0,
+        "total": 100,
+        "fpr": 0.0
+      },
+      "code": {
+        "fp": 0,
+        "total": 100,
+        "fpr": 0.0
+      },
+      "encoded_benign": {
+        "fp": 0,
+        "total": 75,
+        "fpr": 0.0
+      },
+      "injection_like": {
+        "fp": 0,
+        "total": 75,
+        "fpr": 0.0
+      },
+      "general": {
+        "fp": 0,
+        "total": 100,
+        "fpr": 0.0
+      },
+      "longform": {
+        "fp": 0,
+        "total": 50,
+        "fpr": 0.0
+      }
+    }
+  }
+}

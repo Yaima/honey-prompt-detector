@@ -1,0 +1,50 @@
+{
+  "experiment": "cross_source_seeding",
+  "eval_set": "hf_safeguard",
+  "n_samples": 10137,
+  "c_local": 0.9,
+  "conditions": {
+    "cold_start": {
+      "description": "Stage 4 only (no seeding, no local overrides)",
+      "f1": 0.9215207534007673,
+      "f1_ci": [
+        0.914080192258227,
+        0.929021497127832
+      ],
+      "precision": 0.9924868519909842,
+      "recall": 0.8600260416666666
+    },
+    "cross_source": {
+      "description": "Stage 4 + Stage 1 overrides only (seed-independent) at c>=0.9",
+      "f1": 0.8959703254088687,
+      "f1_ci": [
+        0.8884039437570989,
+        0.9045338286703263
+      ],
+      "precision": 0.9293459251486533,
+      "recall": 0.8649088541666666,
+      "overrides": 197
+    },
+    "same_source": {
+      "description": "Full gated pipeline (S4 + S1+S2+S3 overrides at c_local>=0.9)",
+      "f1": 0.8995808885163453,
+      "f1_ci": [
+        0.8915139685700588,
+        0.9077389704634163
+      ],
+      "precision": 0.9274109920497753,
+      "recall": 0.8733723958333334,
+      "overrides": 231
+    }
+  },
+  "deltas": {
+    "same_vs_cross_f1": 0.0036105631074766498,
+    "same_vs_cross_ci": [
+      0.0016390671930092055,
+      0.005433533343970517
+    ],
+    "ci_includes_zero": false,
+    "cross_vs_cold_f1": -0.02555042799189866
+  },
+  "interpretation": "Negligible difference (\u0394F1=0.0036) between same-source and cross-source seeding. No evidence of contamination bias."
+}

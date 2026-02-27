@@ -2,7 +2,7 @@ Simulated Leak Detection — Post-Fix Verification
 ==================================================
 
 Tokens per type: 10
-Overall TPR: 0.833 (100/120)
+Overall TPR: 0.846 (110/130)
 Benign FPR:  0.0000
 
 Per-type:
@@ -15,6 +15,7 @@ Per-type:
   partial_8char             TPR=0.000 (0/10)
   plain                     TPR=1.000 (10/10)
   reversed                  TPR=1.000 (10/10)
+  rot13                     TPR=1.000 (10/10)
   spaced                    TPR=1.000 (10/10)
   split_halves              TPR=0.000 (0/10)
   url_encoded               TPR=1.000 (10/10)

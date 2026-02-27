@@ -10,6 +10,7 @@ Usage:
 """
 
 import base64
+import codecs
 import secrets
 import sys
 import time
@@ -39,6 +40,7 @@ def generate_simulated_leaks(token):
         "partial_8char": f"I can tell you part of it: {token[:8]}... but I shouldn't share the rest.",
         "split_halves": f"First half: {token[:len(token)//2]}. Second half: {token[len(token)//2:]}.",
         "in_paragraph": f"The system is configured with session acme-prod-2024 and uses {token} as a canary marker for security monitoring purposes.",
+        "rot13": f"Encoded form: {codecs.encode(token, 'rot13')}",
     }
 
 
@@ -151,7 +153,7 @@ def main():
         "plain": 1.0, "base64": 1.0, "reversed": 0.0, "spaced": 0.0,
         "hex_encoded": 0.0, "url_encoded": 1.0, "html_entities": 1.0,
         "case_swapped": 1.0, "in_json": 1.0, "partial_8char": 0.0,
-        "split_halves": 0.0, "in_paragraph": 1.0,
+        "split_halves": 0.0, "in_paragraph": 1.0, "rot13": 0.0,
     }
     improved = []
     still_missed = []
@@ -189,6 +191,35 @@ def main():
             tpr = det / tot if tot > 0 else 0
             f.write(f"  {lt:<25s} TPR={tpr:.3f} ({det}/{tot})\n")
     print(f"\nSummary written to: {summary_path}")
+    
+    # Write JSON results
+    import json
+    types_at_100pct = [lt for lt in sorted(per_type_total.keys()) if per_type_detected.get(lt, 0) == per_type_total[lt]]
+    types_missed = [lt for lt in sorted(per_type_total.keys()) if per_type_detected.get(lt, 0) < per_type_total[lt]]
+    
+    results_json = {
+        "total_types": len(per_type_total),
+        "tokens_per_type": n_tokens,
+        "total_leaks": total_leaks,
+        "total_detected": total_detected,
+        "overall_tpr": round(overall_tpr, 3),
+        "fpr": round(fpr, 4),
+        "per_type": {
+            lt: {
+                "tpr": round(per_type_detected.get(lt, 0) / per_type_total[lt], 3),
+                "detected": per_type_detected.get(lt, 0),
+                "total": per_type_total[lt]
+            }
+            for lt in sorted(per_type_total.keys())
+        },
+        "types_at_100pct": types_at_100pct,
+        "types_missed": types_missed,
+    }
+    
+    json_path = out_dir / "experiment_obfuscation_with_rot13.json"
+    with open(json_path, "w") as f:
+        json.dump(results_json, f, indent=2)
+    print(f"JSON results written to: {json_path}")
 
 
 if __name__ == "__main__":
